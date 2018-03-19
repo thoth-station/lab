@@ -2,9 +2,10 @@
 
 import requests
 import urllib3
+from urllib.parse import urlparse
 
 
-def obtain_location(name: str, verify: bool=True) -> str:
+def obtain_location(name: str, verify: bool=True, only_netloc: bool=False) -> str:
     """Obtain location of a service based on it's name in Red Hat's internal network.
 
     This function basically checks redirect of URL registered at Red Hat's internal network. By doing so it
@@ -19,6 +20,9 @@ def obtain_location(name: str, verify: bool=True) -> str:
     response = requests.get(f"https://url.corp.redhat.com/{name}", verify=verify, allow_redirects=False)
     response.raise_for_status()
     location = response.headers['Location']
+
+    if only_netloc:
+        return urlparse(location).netloc
 
     if location.endswith('/'):
         location = location[:-1]
