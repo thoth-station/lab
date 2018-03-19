@@ -18,4 +18,9 @@ def obtain_location(name: str, verify: bool=True) -> str:
     # Get actual Thoth user API location based on redirect headers.
     response = requests.get(f"https://url.corp.redhat.com/{name}", verify=verify, allow_redirects=False)
     response.raise_for_status()
-    return response.headers['Location']
+    location = response.headers['Location']
+
+    if location.endswith('/'):
+        location = location[:-1]
+
+    return location
