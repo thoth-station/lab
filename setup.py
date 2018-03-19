@@ -10,7 +10,7 @@ def get_install_requires():
 
 setup(
     name='thoth-lab',
-    version='0.0.1',
+    version='0.0.2',
     description='Code for Thoth experiments in Jupyter notebooks.',
     long_description='Code for Thoth experiments in Jupyter notebooks.',
     author='Fridolin Pokorny',
