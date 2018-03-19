@@ -9,6 +9,8 @@ name = "pypi"
 
 networkx = "*"
 requests = "*"
+pandas = "*"
+plotly = "*"
 
 
 [dev-packages]
