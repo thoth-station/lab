@@ -28,3 +28,13 @@ def obtain_location(name: str, verify: bool=True, only_netloc: bool=False) -> st
         location = location[:-1]
 
     return location
+
+
+def display_page(location: str, verify: bool=True, no_obtain_location: bool=False, width: int=980, height: int=900):
+    """Display the given page in notebook as iframe."""
+    from IPython.display import IFrame
+
+    if not no_obtain_location:
+        location = obtain_location(location, verify=verify)
+
+    return IFrame(location, width=width, height=height)
