@@ -46,3 +46,16 @@ class GraphQueryResult(object):
         labels, values = self._get_items()
         trace = go.Bar(x=labels, y=values)
         return iplot([trace])
+
+    def serialize(self):
+        """Serialize the output of graph query."""
+        # It should be fine to just use one check for nested parts. We can extend this later on.
+        def _serialize(obj):
+            if hasattr(obj, 'to_dict'):
+                return obj.to_dict()
+            return obj
+
+        if isinstance(self.result, list):
+            return list(map(lambda x: _serialize(x), self.result))
+
+        return _serialize(self.result)
