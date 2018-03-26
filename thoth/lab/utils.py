@@ -44,7 +44,7 @@ def display_page(location: str, verify: bool=True, no_obtain_location: bool=Fals
     return IFrame(location, width=width, height=height)
 
 
-def packages_info(thoth_packages: bool=True):
+def packages_info(thoth_packages: bool=True) -> pd.DataFrame:
     """Display information about versions of packages available in the installation."""
     import thoth
 
