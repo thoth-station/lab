@@ -2,3 +2,4 @@
 
 from .utils import obtain_location
 from .graph import GraphQueryResult
+from .utils import packages_info
