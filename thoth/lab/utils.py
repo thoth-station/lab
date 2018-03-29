@@ -9,7 +9,7 @@ import requests
 import pandas as pd
 
 
-def obtain_location(name: str, verify: bool=True, only_netloc: bool=False) -> str:
+def obtain_location(name: str, verify: bool=False, only_netloc: bool=False) -> str:
     """Obtain location of a service based on it's name in Red Hat's internal network.
 
     This function basically checks redirect of URL registered at Red Hat's internal network. By doing so it
