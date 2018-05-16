@@ -29,6 +29,8 @@ import plotly.graph_objs as go
 
 
 class GraphQueryResult(object):
+    """Wrap results of graph database queries."""
+
     def __init__(self, result):
         """Initialization.
 

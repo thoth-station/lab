@@ -1,17 +1,16 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 networkx = "*"
 requests = "*"
 pandas = "*"
 plotly = "*"
 
-
 [dev-packages]
-
+coala = "*"
+pycodestylebear = "*"
+yamllintbear = "*"
+pydocstylebear = "*"
