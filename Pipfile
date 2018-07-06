@@ -10,7 +10,4 @@ pandas = "*"
 plotly = "*"
 
 [dev-packages]
-coala = "*"
-pycodestylebear = "*"
-yamllintbear = "*"
-pydocstylebear = "*"
+coala-bears = "*"
