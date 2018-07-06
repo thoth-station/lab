@@ -27,7 +27,7 @@ import requests
 import pandas as pd
 
 
-def obtain_location(name: str, verify: bool=False, only_netloc: bool=False) -> str:
+def obtain_location(name: str, verify: bool = False, only_netloc: bool = False) -> str:
     """Obtain location of a service based on it's name in Red Hat's internal network.
 
     This function basically checks redirect of URL registered at Red Hat's internal network. By doing so it
@@ -52,7 +52,8 @@ def obtain_location(name: str, verify: bool=False, only_netloc: bool=False) -> s
     return location
 
 
-def display_page(location: str, verify: bool=True, no_obtain_location: bool=False, width: int=980, height: int=900):
+def display_page(location: str, verify: bool = True,
+                 no_obtain_location: bool = False, width: int = 980, height: int = 900):
     """Display the given page in notebook as iframe."""
     from IPython.display import IFrame
 
@@ -62,7 +63,7 @@ def display_page(location: str, verify: bool=True, no_obtain_location: bool=Fals
     return IFrame(location, width=width, height=height)
 
 
-def packages_info(thoth_packages: bool=True) -> pd.DataFrame:
+def packages_info(thoth_packages: bool = True) -> pd.DataFrame:
     """Display information about versions of packages available in the installation."""
     import thoth
 
@@ -89,7 +90,7 @@ def packages_info(thoth_packages: bool=True) -> pd.DataFrame:
             module = importlib.import_module(name)
             import_successful = True
             version = module.__version__
-        except:
+        except Exception as e:
             pass
 
         packages.append(name)

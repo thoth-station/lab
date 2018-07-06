@@ -83,7 +83,7 @@ class GraphQueryResult(object):
         return _serialize(self.result)
 
 
-def get_graph_traversal(location: str, port: int=80):
+def get_graph_traversal(location: str, port: int = 80):
     """Get graph traversal handle for your experiments.
 
     :param location: A location to the graph database instance. Recommended to be
