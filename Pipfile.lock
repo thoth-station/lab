@@ -108,7 +108,7 @@
                 "sha256:f5a758252502b466b9c2b201ea397dae5a914336c987f3a76c3741a82d43c96e",
                 "sha256:fb4c33a404d9eff49a0cdc8ead0af6453f62f19e071b60d283f9dc05581e4134"
             ],
-            "markers": "python_version >= '2.7' and python_version != '3.3.*' and python_version != '3.1.*' and python_version != '3.2.*' and python_version != '3.0.*'",
+            "markers": "python_version != '3.3.*' and python_version != '3.0.*' and python_version >= '2.7' and python_version != '3.2.*' and python_version != '3.1.*'",
             "version": "==1.15.0"
         },
         "pandas": {
@@ -138,10 +138,11 @@
         },
         "plotly": {
             "hashes": [
-                "sha256:015a5b8ca616d19eb96433dd597c3ccccc80e3afba02a23bd526a017ff4fce05"
+                "sha256:2e565c8907ea6f9c517423cf5452e4f4b85635bd0dd400aae943339c826d4176",
+                "sha256:33d298b9d643fa81f95b1b4aaeb4e5ba6277c9539f7d4c1dbfa480e73a603f8d"
             ],
             "index": "pypi",
-            "version": "==3.1.0"
+            "version": "==3.1.1"
         },
         "python-dateutil": {
             "hashes": [
@@ -190,7 +191,7 @@
                 "sha256:a68ac5e15e76e7e5dd2b8f94007233e01effe3e50e8daddf69acfd81cb686baf",
                 "sha256:b5725a0bd4ba422ab0e66e89e030c806576753ea3ee08554382c14e685d117b5"
             ],
-            "markers": "python_version != '3.0.*' and python_version != '3.2.*' and python_version >= '2.6' and python_version != '3.1.*' and python_version != '3.3.*' and python_version < '4'",
+            "markers": "python_version != '3.2.*' and python_version < '4' and python_version != '3.1.*' and python_version >= '2.6' and python_version != '3.0.*' and python_version != '3.3.*'",
             "version": "==1.23"
         }
     },
@@ -220,7 +221,7 @@
             "hashes": [
                 "sha256:67f3886b74f8614b9696ea47eb9ce90fa808da142619e8e6da6eaf541df30e0f"
             ],
-            "markers": "python_version != '3.0.*' and python_version >= '2.7' and python_version != '3.2.*' and python_version != '3.1.*' and python_version != '3.3.*'",
+            "markers": "python_version != '3.2.*' and python_version >= '2.7' and python_version != '3.1.*' and python_version != '3.0.*' and python_version != '3.3.*'",
             "version": "==0.6.6"
         },
         "autopep8": {
@@ -417,7 +418,7 @@
                 "sha256:b9c40e9750f3d77e6e4d441d8b0266cf555e7cdabdcff33c4fd06366ca761ef8",
                 "sha256:ec9ef8f4a9bc6f71eec99e1806bfa2de401650d996c59330782b89a5555c1497"
             ],
-            "markers": "python_version != '3.0.*' and python_version >= '2.7' and python_version != '3.2.*' and python_version != '3.1.*' and python_version != '3.3.*'",
+            "markers": "python_version != '3.2.*' and python_version >= '2.7' and python_version != '3.1.*' and python_version != '3.0.*' and python_version != '3.3.*'",
             "version": "==4.3.4"
         },
         "jinja2": {
@@ -752,7 +753,7 @@
                 "sha256:a68ac5e15e76e7e5dd2b8f94007233e01effe3e50e8daddf69acfd81cb686baf",
                 "sha256:b5725a0bd4ba422ab0e66e89e030c806576753ea3ee08554382c14e685d117b5"
             ],
-            "markers": "python_version != '3.0.*' and python_version != '3.2.*' and python_version >= '2.6' and python_version != '3.1.*' and python_version != '3.3.*' and python_version < '4'",
+            "markers": "python_version != '3.2.*' and python_version < '4' and python_version != '3.1.*' and python_version >= '2.6' and python_version != '3.0.*' and python_version != '3.3.*'",
             "version": "==1.23"
         },
         "vulture": {
