@@ -137,11 +137,11 @@
         },
         "plotly": {
             "hashes": [
-                "sha256:7e08fb1cb4b2c01f8c469816ae19707fcb4f4aaeef5305966eabf147569805df",
-                "sha256:c1ea33ac3a89f02b86952249e97c82add9baa940f61d0f35f6182a9dbdf15e22"
+                "sha256:53c647fdb28590de838678029f7d8fdc42f5ba4643d13c2afd2c4e4d56e18426",
+                "sha256:5dc85bde91bc80fa05f0d89e9f3a8eaee735b2b404047266874e0ff9c104407f"
             ],
             "index": "pypi",
-            "version": "==3.4.0"
+            "version": "==3.4.1"
         },
         "python-dateutil": {
             "hashes": [
