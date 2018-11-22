@@ -1,5 +1,6 @@
 import os
 from setuptools import setup
+from pathlib import Path
 
 
 def get_install_requires():
@@ -24,7 +25,7 @@ setup(
     name='thoth-lab',
     version=get_version(),
     description='Code for Thoth experiments in Jupyter notebooks.',
-    long_description='Code for Thoth experiments in Jupyter notebooks.',
+    long_description=Path('README.rst').read_text(),
     author='Fridolin Pokorny',
     author_email='fridolin@redhat.com',
     license='GPLv3+',
