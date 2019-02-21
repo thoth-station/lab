@@ -97,3 +97,21 @@ def packages_info(thoth_packages: bool = True) -> pd.DataFrame:
         importable.append(import_successful)
 
     return pd.DataFrame(data={'package': packages, 'version': versions, 'importable': importable})
+
+
+# Pandas utilities
+
+def str_join(df: pd.DataFrame, cols: list, sep: str = ''):
+    """Combine two or more columns into one joining them with separator."""
+    if len(cols) < 2 or not all(isinstance(col, str) for col in cols):
+        raise ValueError("Number of columns must be list of strings of length >= 2.")
+
+    def stringify(s):
+        return str(s) if not pd.isna(s) else None
+
+    def safe_join(str_row: list):
+        return sep.join(
+            [col for col in str_row if stringify(col) is not None]
+        )
+
+    return df[cols].apply(lambda r: safe_join(r), axis=1)
