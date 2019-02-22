@@ -1,6 +1,9 @@
 import os
-from setuptools import setup
+
 from pathlib import Path
+
+from setuptools import find_packages
+from setuptools import setup
 
 
 def get_install_requires():
@@ -30,7 +33,8 @@ setup(
     author_email='fridolin@redhat.com',
     license='GPLv3+',
     packages=[
-        'thoth.lab',
+        'thoth.{subpackage}'.format(subpackage=p)
+        for p in find_packages('thoth/')
     ],
     zip_safe=False,
     install_requires=get_install_requires()
