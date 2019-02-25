@@ -8,6 +8,7 @@ networkx = "*"
 requests = "*"
 pandas = "*"
 plotly = "*"
+gremlinpython = "*"
 
 [dev-packages]
 coala-bears = "*"
