@@ -1,6 +1,7 @@
 import os
 
 from pathlib import Path
+from setuptools import setup
 
 from setuptools import find_packages
 from setuptools import setup
@@ -37,6 +38,9 @@ setup(
         'thoth.{subpackage}'.format(subpackage=p)
         for p in find_packages('thoth/')
     ],
+    package_data={
+        'thoth.lab.viz': ['assets/*/*.css', 'assets/*/*.js']
+    },
     zip_safe=False,
     install_requires=get_install_requires(),
     command_options={

@@ -12,9 +12,9 @@ from IPython.core.display import display, Javascript
 from thoth.lab.jupyter import load_style
 
 
-_ROOT_DIR = Path(__file__).parent
+_THIS_DIR = Path(__file__).parent
 
-_DEFAULT_CSS_DIR = _ROOT_DIR / Path("assets/css")
+_DEFAULT_CSS_DIR = _THIS_DIR.parent / Path("assets/css")
 
 _LIB_D3 = 'https://d3js.org/d3.v5.min'
 _LIB_D3_HIERARCHY = 'https://d3js.org/d3-hierarchy.v1.min'
@@ -95,7 +95,7 @@ def iplot(data: pd.DataFrame,
 
 def _get_js_template(kind: str, static: bool = True) -> Template:
     """Return string template of JS script."""
-    script_path = _ROOT_DIR / Path(
+    script_path = _THIS_DIR / Path(
         f"{['dynamic', 'static'][static]}/templates/{kind}.js")
 
     return Template(script_path.read_text())
