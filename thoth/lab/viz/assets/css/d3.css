@@ -8,12 +8,11 @@
 }
 
 .nodes {
-    z-index: 1;
-    font: 13px sans-serif;
-}
-
-.nodes circle {
     fill: darkslateblue;
     stroke: none;
+
+    font: 13px sans-serif;
+
+    z-index: 1;
 }
 
