@@ -1,18 +1,18 @@
 /* d3.css */
 
-.link {
+.links {
     fill: none;
     stroke: #ccc;
     stroke-width: 1px;
 
 }
 
-.node {
+.nodes {
     z-index: 1;
     font: 13px sans-serif;
 }
 
-circle.node {
+.nodes circle {
     fill: darkslateblue;
     stroke: none;
 }

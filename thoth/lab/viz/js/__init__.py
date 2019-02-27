@@ -3,29 +3,21 @@
 
 import pandas as pd
 
-from string import Template
-from textwrap import dedent
 from pathlib import Path
 
-from IPython.core.display import display, Javascript
-
-from thoth.lab.jupyter import load_style
+from jupyter_d3.core import d3
+from jupyter_require.core import require
+from jupyter_require.core import link_css
+from jupyter_require.core import load_style
 
 
 _THIS_DIR = Path(__file__).parent
 
 _DEFAULT_CSS_DIR = _THIS_DIR.parent / Path("assets/css")
-
-_LIB_D3 = 'https://d3js.org/d3.v5.min'
-_LIB_D3_HIERARCHY = 'https://d3js.org/d3-hierarchy.v1.min'
-
-_REQUIREJS_TEMPLATE = Template(dedent("""
-    require.config({
-        paths: {
-            $libs
-        }
-    });
-"""))
+_DEFAULT_LIBRARIES = {
+    'd3': 'https://d3js.org/d3.v5.min',
+    'd3-hierarchy': 'https://d3js.org/d3-hierarchy.v1.min'
+}
 
 
 def init_notebook_mode(custom_css: list = None, custom_libs: dict = None):
@@ -44,7 +36,8 @@ def init_notebook_mode(custom_css: list = None, custom_libs: dict = None):
 
         Please note that <path> does __NOT__ contain `.js` suffix.
     """
-    custom_libs = custom_libs or {}
+    required_libraries = custom_libs or {}
+    required_libraries.update(_DEFAULT_LIBRARIES)
 
     # required styles
     style_css = '\n'.join([
@@ -54,48 +47,43 @@ def init_notebook_mode(custom_css: list = None, custom_libs: dict = None):
 
     load_style(style_css)
 
-    # required libraries
-    require = (
-        f"'d3': '{_LIB_D3}'",
-        f"'d3-hierarchy': '{_LIB_D3_HIERARCHY}'",
-        *(f"'{key}': '{path}'" for key, path in custom_libs.items())
-    )
-    require_js: str = _REQUIREJS_TEMPLATE.safe_substitute(libs=', '.join(require))
+    # custom css links
+    for stylesheet in custom_css or []:
+        link_css(stylesheet)
 
-    return display(Javascript(dedent(require_js), css=custom_css))
+    # required libraries
+    return require.config(required_libraries)
 
 
 def plot(data: pd.DataFrame,
          kind: str = 'diagonal',
+         layout: str = 'tree',
          **kwargs):
     """Syntactic sugar which wraps static plot visualizations."""
-    template: Template = _get_js_template(kind, static=True)
+    js: str = _get_js_template(kind, static=True)
 
-    js: str = template.safe_substitute(
-        data=data.to_csv(index=False),
-        **kwargs
-    )
-
-    return display(Javascript(data=js))
+    return d3(js,
+              data=data.to_csv(index=False),
+              layout=layout,
+              **kwargs)
 
 
 def iplot(data: pd.DataFrame,
           kind: str = 'diagonal',
+          layout: str = 'tree',
           **kwargs):
     """Syntactic sugar which wraps dynamic plot visualizations."""
-    template: Template = _get_js_template(kind, static=False)
+    js: str = _get_js_template(kind, static=False)
 
-    js: str = template.safe_substitute(
-        data=data.to_csv(index=False),
-        **kwargs
-    )
-
-    return display(Javascript(data=js))
+    return d3(js,
+              data=data.to_csv(index=False),
+              layout=layout,
+              **kwargs)
 
 
-def _get_js_template(kind: str, static: bool = True) -> Template:
+def _get_js_template(kind: str, static: bool = True) -> str:
     """Return string template of JS script."""
     script_path = _THIS_DIR / Path(
         f"{['dynamic', 'static'][static]}/templates/{kind}.js")
 
-    return Template(script_path.read_text())
+    return script_path.read_text()
