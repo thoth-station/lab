@@ -3,6 +3,10 @@
  *
  * @module
  * @author Marek Cermak <macermak@redhat.com>
+ *
+ * Require template variables:
+ * @param data: hierarchical data in CSV format
+ * @param layout: layout to use, one of {'tree', 'cluster'} [default = 'tree']
  */
 
 const margin = { top: 80, right: 20, bottom: 80, left: 20 };
@@ -52,7 +56,8 @@ require(['d3', 'd3-hierarchy'], (d3, d3_hierarchy) => {
         .attr('class', 'node')
         .attr('cx', d => d.x )
         .attr('cy', d => d.y )
-        .attr('r', radius);
+        .attr('r', radius)
+        .attr('fill', d => d.data.color );
 
     // node text
     nodes

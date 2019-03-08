@@ -4,6 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+ipython = "*"
+jupyter-require = "*"
 networkx = "*"
 requests = "*"
 pandas = "*"

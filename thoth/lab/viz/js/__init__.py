@@ -5,10 +5,10 @@ import pandas as pd
 
 from pathlib import Path
 
-from jupyter_d3.core import d3
+from jupyter_require.core import execute_js
 from jupyter_require.core import require
 from jupyter_require.core import link_css
-from jupyter_require.core import load_style
+from jupyter_require.core import load_css
 
 
 _THIS_DIR = Path(__file__).parent
@@ -45,7 +45,7 @@ def init_notebook_mode(custom_css: list = None, custom_libs: dict = None):
         for css_file in _DEFAULT_CSS_DIR.iterdir()
     ])
 
-    load_style(style_css)
+    load_css(style_css, {'id': 'thoth-lab-stylesheet'})
 
     # custom css links
     for stylesheet in custom_css or []:
@@ -62,10 +62,10 @@ def plot(data: pd.DataFrame,
     """Syntactic sugar which wraps static plot visualizations."""
     js: str = _get_js_template(kind, static=True)
 
-    return d3(js,
-              data=data.to_csv(index=False),
-              layout=layout,
-              **kwargs)
+    return execute_js(js,
+                      data=data.to_csv(index=False),
+                      layout=layout,
+                      **kwargs)
 
 
 def iplot(data: pd.DataFrame,
@@ -75,10 +75,10 @@ def iplot(data: pd.DataFrame,
     """Syntactic sugar which wraps dynamic plot visualizations."""
     js: str = _get_js_template(kind, static=False)
 
-    return d3(js,
-              data=data.to_csv(index=False),
-              layout=layout,
-              **kwargs)
+    return execute_js(js,
+                      data=data.to_csv(index=False),
+                      layout=layout,
+                      **kwargs)
 
 
 def _get_js_template(kind: str, static: bool = True) -> str:
