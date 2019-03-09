@@ -7,13 +7,20 @@
 
 }
 
-.nodes {
+
+.nodes circle {
     fill: darkslateblue;
     stroke: none;
 }
 
-.nodes text {
+.nodes circle.is-leaf {
+    fill-opacity: 0;  /* transparent fill */
 
+    stroke: darkslateblue;
+    stroke-width: 2px;
+}
+
+.nodes text {
     font: 13px sans-serif;
 
     z-index: 1 !important;

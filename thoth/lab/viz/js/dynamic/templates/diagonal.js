@@ -65,11 +65,12 @@ function update(source) {
         .enter()
         .append('circle')
         .merge(nodes)
-        .attr('class', 'node')
         .attr('cx', d => d.x )
         .attr('cy', d => d.y )
         .attr('r', radius)
         .attr('fill', d => d.data.color)
+        .classed('node', true)
+        .classed('is-leaf', d => !(d.children || d.hidden_children))
         .on('click', click);  // handle click event
 
     // node text
