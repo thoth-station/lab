@@ -5,7 +5,6 @@
  * @author Marek Cermak <macermak@redhat.com>
  */
 
-
 const margin = { top: 80, right: 20, bottom: 80, left: 20 };
 
 // svg proportions
@@ -15,11 +14,11 @@ const height = 640;
 const radius = 11;
 const offset = 1.618 * radius;
 
-
-$(element).empty();  // clear output
-
+const transition_duration = 700;
 
 const data = d3.csvParse(`$$data`); console.debug("Data: ", data);
+
+$(element).empty();  // clear output
 
 
 let root = d3.stratify()
@@ -133,7 +132,46 @@ function click(d, i) {
     console.debug(`Node ${i} clicked.`);
     console.debug("Node data:", d);
 
-    toggleChildren(this, d, i);  // this will change the root node data too
+    let node = d3.select(this);
+    if (!node.classed('is-focused')) {
+        focus(this, d);
+    } else toggleChildren(this, d, i);  // toggle children (if applicable)
+}
+
+/**
+  * Focus on node by moving it closer to center in the viewport
+  *
+  * @param node clicked node element
+  * @param d {object} Node data
+  */
+function focus(node, d, idx) {
+
+    // remove focus from all previous nodes
+    d3.selectAll('.is-focused').classed('is-focused', false);
+
+    // compute center of gravity from focus group
+    let n  = 0,
+        x0 = 0,
+        y0 = 0;
+
+    d.each((d) => {
+        console.log('child: ', d)
+        n  = n + 1;
+        x0 = d.x / n + x0 * (1 - 1/n);
+        y0 = d.y / n + y0 * (1 - 1/n);
+    });
+
+    // update layout -- center on focus group
+    let translation_vector = {
+        x: width  / 2 - x0,
+        y: (height + margin.top) / 2 - y0
+    };
+
+    svg
+      .transition().duration(transition_duration)
+      .attr("transform", `translate(${translation_vector.x}, ${translation_vector.y})`);
+
+    d3.select(node).classed('is-focused', true);
 }
 
 /**
@@ -146,6 +184,9 @@ function click(d, i) {
 function toggleChildren(node, d, idx) {
     // Check if the node has children
     console.debug(d);
+
+    // ignore leaf nodes
+    if (d3.select(node).classed('is-leaf')) return;
 
     if (d.children) {
         // collapse

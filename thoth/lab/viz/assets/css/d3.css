@@ -11,6 +11,8 @@
 .nodes circle {
     fill: darkslateblue;
     stroke: none;
+
+    cursor: pointer;
 }
 
 .nodes circle.is-leaf {
@@ -18,6 +20,8 @@
 
     stroke: darkslateblue;
     stroke-width: 2px;
+
+    cursor: default;
 }
 
 .nodes text {
