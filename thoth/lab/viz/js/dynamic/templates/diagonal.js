@@ -40,9 +40,12 @@ let svg = d3.select(element.get(0)).append('svg')
     .append('g')
     .attr('transform', `translate(0, ${margin.top})`);
 
+// declare globaly for future reference
+let nodes  = null,
+    labels = null;
+
 let nodes_group = svg.append('g').attr('class', 'nodes'),
     links_group = svg.append('g').attr('class', 'links');
-
 
 update(root); // initial draw
 
@@ -52,11 +55,10 @@ update(root); // initial draw
   */
 function update(source) {
 
-    console.debug("Root: ", root);
-    console.debug("Source: ", source);
+    console.debug("Layout update triggered", arguments);
 
     // node circles
-    let nodes = nodes_group
+    nodes = nodes_group
         .selectAll('circle.node')
         .data(root.descendants(), (d) => d.id || (d.id = ++i));
 
@@ -73,7 +75,7 @@ function update(source) {
         .on('click', click);  // handle click event
 
     // node text
-    let labels = nodes_group
+    labels = nodes_group
         .selectAll('text.node')
         .data(root.descendants());
 
@@ -104,9 +106,6 @@ function update(source) {
         .attr('x2', d => d.target.x )
         .attr('y2', d => d.target.y - offset );
 
-    console.debug("Nodes: ", nodes);
-    console.debug("Links: ", links);
-
     /* Collapsible */
 
     // collapsed nodes and links will be put in `exit` state (see https://bost.ocks.org/mike/join/)
@@ -121,6 +120,7 @@ function update(source) {
     links
         .exit()
         .remove();
+
 }
 
 // Collapsing and expanding nodes
@@ -129,11 +129,14 @@ function update(source) {
   * Handle node click event
   */
 function click(d, i) {
-    console.debug(`Node ${i} clicked.`);
-    console.debug("Node data:", d);
+    console.debug("Node event triggered: \t", click, arguments);
 
     let node = d3.select(this);
-    if (!node.classed('is-focused')) {
+    if ((d.depth === 0) && (node.classed('is-collapsed'))) {
+        // in case only root node is displayed, toggle immediately
+        toggleChildren(this, d, i);
+    }
+    else if (!node.classed('is-focused')) {
         focus(this, d);
     } else toggleChildren(this, d, i);  // toggle children (if applicable)
 }
@@ -145,7 +148,6 @@ function click(d, i) {
   * @param d {object} Node data
   */
 function focus(node, d, idx) {
-
     // remove focus from all previous nodes
     d3.selectAll('.is-focused').classed('is-focused', false);
 
@@ -155,7 +157,6 @@ function focus(node, d, idx) {
         y0 = 0;
 
     d.each((d) => {
-        console.log('child: ', d)
         n  = n + 1;
         x0 = d.x / n + x0 * (1 - 1/n);
         y0 = d.y / n + y0 * (1 - 1/n);
@@ -194,12 +195,16 @@ function toggleChildren(node, d, idx) {
         d.children = null;
 
         d3.select(node).classed('is-collapsed', true);
+
+        focus(nodes[0], root, 0);  // give focus back on root node
     } else {
         // expand
         d.children = d.hidden_children;
         d.hidden_children = null;
 
         d3.select(node).classed('is-collapsed', false);
+
+        focus(node, d, idx);  // focus still on the expanded node
     }
 
     // update the layout to compute new node positions
