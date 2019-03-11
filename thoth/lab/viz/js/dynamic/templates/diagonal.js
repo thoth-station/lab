@@ -76,8 +76,7 @@ let layout = d3.tree()
     .size([
         width  - margin.right   - margin.left,
         height - margin.top - margin.bottom
-    ]);
-
+    ])(root);
 
 /* Control events */
 
@@ -94,22 +93,34 @@ button_reset
             .delay(transition_duration)
             .style('opacity', 0);
     })
-    .on('click', () => {
-        let transform = d3.zoomTransform(canvas)
-            .scale(1)
-            .translate(0, margin.top);
+    .on('click', resetView);
 
-        canvas
-            .transition().delay(200)
-            .call(zoom.transform, transform);
-    });
 
-layout(root);
+// position the svg canvas
+zoom.translateTo(canvas, 0, -margin.top);
+
 update(root);  // initial draw
 
 // set focus on root node
 setTimeout(() => focus(null, root, 0), 200);
 
+
+/**
+ * Reset view to the original scale and position
+ *
+ * @returns {*}
+ */
+function resetView(delay) {
+    let transform = d3.zoomTransform(canvas)
+        .scale(1)
+        .translate(0, margin.top);
+
+    canvas
+        .transition().delay(delay || 200)
+        .call(zoom.transform, transform);
+
+    return canvas;
+}
 
 /**
  * Update diagonal layout
@@ -225,13 +236,13 @@ function focus(node, d, idx) {
     canvas
         .transition()
         .duration(transition_duration)
-        .call(zoom.translateTo, x0, y0);
+        .call(zoom.translateTo, x0, y0 - margin.top);
 
     // highlight focused node by dropping shadow around it
     node = node ? node : nodes[idx];
 
     d3.select(node)
-        .classed('is-focused', true)
+        .classed('is-focused', true);
 
     filters.selectAll('circle').remove();
 
