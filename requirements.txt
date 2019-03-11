@@ -1,5 +1,4 @@
 gremlinpython
-jupyter_d3
 jupyter_require
 networkx
 requests
