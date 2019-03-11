@@ -91,6 +91,6 @@ def iplot(data: pd.DataFrame,
 def _get_js_template(kind: str, static: bool = True) -> str:
     """Return string template of JS script."""
     script_path = _THIS_DIR / Path(
-        f"assets/js/{['dynamic', 'static'][static]}/templates/{kind}.js")
+        f"assets/js/{['dynamic', 'static'][static]}/{kind}.js")
 
     return script_path.read_text()

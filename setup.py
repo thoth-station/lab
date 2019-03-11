@@ -1,10 +1,11 @@
-import glob
 import os
 
 from pathlib import Path
 
 from setuptools import find_packages
 from setuptools import setup
+
+_ASSETS_DIR = Path('assets/')
 
 
 def get_install_requires():
@@ -40,8 +41,9 @@ setup(
     ],
     package_data={
         'thoth.lab.viz': [
-            *list(glob.iglob('assets/**/*.css', recursive=True)),
-            *list(glob.iglob('assets/**/*.js',  recursive=True))
+            'assets/css/*.css',
+            'assets/js/dynamic/*.js',
+            'assets/js/static/*.js',
         ]
     },
     zip_safe=False,
