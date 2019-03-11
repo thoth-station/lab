@@ -45,6 +45,13 @@ def init_notebook_mode(custom_css: list = None, custom_libs: dict = None):
         for css_file in _DEFAULT_CSS_DIR.iterdir()
     ])
 
+    link_css(
+        'https://use.fontawesome.com/releases/v5.7.2/css/all.css',
+        dict(
+            integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr",
+            crossorigin="anonymous"
+        )
+    )
     load_css(style_css, {'id': 'thoth-lab-stylesheet'})
 
     # custom css links

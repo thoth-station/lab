@@ -1,5 +1,24 @@
 /* d3.css */
 
+/* controls */
+
+.controls {
+    padding: 10px
+}
+
+.icon {
+    cursor: pointer;
+}
+
+.tooltip {
+    margin: 0.25rem 0;
+
+    top: 4rem;
+    text-align: center;
+}
+
+/* links */
+
 .links {
     fill: none;
     stroke: #ccc;
@@ -7,8 +26,9 @@
 
 }
 
+/* nodes */
 
-.nodes circle {
+.nodes {
     fill: darkslateblue;
     stroke: none;
 
@@ -29,6 +49,7 @@
 
     z-index: 1 !important;
 }
+
 
 .filters circle.focus-node {
     fill: none;

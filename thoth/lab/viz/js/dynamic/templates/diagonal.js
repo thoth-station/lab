@@ -21,29 +21,39 @@ const data = d3.csvParse(`$$data`); console.debug("Data: ", data);
 $(element).empty();  // clear output
 
 
-let root = d3.stratify()
-    .id( d => d.target)
-    .parentId( d => d.source)
-    (data);
+/* Drawing area setup */
 
-let layout = d3.tree()
-    .size([
-        width  - margin.right   - margin.left,
-        height - margin.top - margin.bottom
-    ]);
+let area = d3.select(element.get(0));
 
-layout(root);
+/* Controls */
+
+let controls = area.append('div')
+    .attr('height', margin.top)
+    .classed('controls', true);
+
+let button_reset = controls.append('a')
+    .attr('class', 'button btn-reset')
+    .append('span')
+    .attr('class', 'icon')
+    .append('i')
+    .attr('class', 'fas fa-refresh');
+
+let button_reset_tooltip = button_reset.append('span')
+    .attr('class', 'tooltip')
+    .text("Reset view");
+
+/* SVG Canvas */
 
 let zoom = d3.zoom()
     .scaleExtent([1 / 2, 4])
     .on('zoom', () => svg.attr('transform', d3.event.transform));
 
-let area = d3.select(element.get(0)).append('svg')
-    .attr('width', width)
-    .attr('height', height)
+let canvas = area.append('svg')
+    .style('width', width)
+    .style('height', height)
     .call(zoom);  // attach zoom event listener
 
-let svg = area.append('g');
+let svg = canvas.append('g');
 
 // filter group should be first (due to overlay)
 let filters = svg.append('g').attr('class', 'filters');
@@ -55,11 +65,50 @@ let nodes  = null,
 let nodes_group  = svg.append('g').attr('class', 'nodes'),
     links_group  = svg.append('g').attr('class', 'links');
 
+/* Draw */
 
+let root = d3.stratify()
+    .id( d => d.target)
+    .parentId( d => d.source)
+    (data);
+
+let layout = d3.tree()
+    .size([
+        width  - margin.right   - margin.left,
+        height - margin.top - margin.bottom
+    ]);
+
+
+/* Control events */
+
+button_reset
+    .on('mouseover', () => {
+        button_reset_tooltip
+            .transition()
+            .delay(transition_duration)
+            .style('opacity', 1);
+    })
+    .on('mouseout', () => {
+        button_reset_tooltip
+            .transition()
+            .delay(transition_duration)
+            .style('opacity', 0);
+    })
+    .on('click', () => {
+        let transform = d3.zoomTransform(canvas)
+            .scale(1)
+            .translate(0, margin.top);
+
+        canvas
+            .transition().delay(200)
+            .call(zoom.transform, transform);
+    });
+
+layout(root);
 update(root);  // initial draw
 
 // set focus on root node
-setTimeout(() => focus(null, root, 0), 2);
+setTimeout(() => focus(null, root, 0), 200);
 
 
 /**
@@ -173,7 +222,7 @@ function focus(node, d, idx) {
         y0 = d.y / n + y0 * (1 - 1/n);
     });
 
-    area
+    canvas
         .transition()
         .duration(transition_duration)
         .call(zoom.translateTo, x0, y0);
