@@ -1,3 +1,4 @@
+import glob
 import os
 
 from pathlib import Path
@@ -38,7 +39,10 @@ setup(
         for p in find_packages('thoth/')
     ],
     package_data={
-        'thoth.lab.viz': ['assets/*/*.css', 'assets/*/*.js']
+        'thoth.lab.viz': [
+            *list(glob.iglob('assets/**/*.css', recursive=True)),
+            *list(glob.iglob('assets/**/*.js', recursive=True))
+        ]
     },
     zip_safe=False,
     install_requires=get_install_requires(),
