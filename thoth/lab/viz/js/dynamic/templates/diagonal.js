@@ -45,18 +45,21 @@ let area = d3.select(element.get(0)).append('svg')
 
 let svg = area.append('g');
 
+// filter group should be first (due to overlay)
+let filters = svg.append('g').attr('class', 'filters');
+
 // declare globaly for future reference
 let nodes  = null,
     labels = null;
 
-let nodes_group = svg.append('g').attr('class', 'nodes'),
-    links_group = svg.append('g').attr('class', 'links');
+let nodes_group  = svg.append('g').attr('class', 'nodes'),
+    links_group  = svg.append('g').attr('class', 'links');
 
 
 update(root);  // initial draw
 
 // set focus on root node
-focus(null, root, 0);
+setTimeout(() => focus(null, root, 0), 2);
 
 
 /**
@@ -156,7 +159,8 @@ function click(d, i) {
  */
 function focus(node, d, idx) {
     // remove focus from all previous nodes
-    d3.selectAll('.is-focused').classed('is-focused', false);
+    d3.selectAll('.is-focused')
+        .classed('is-focused', false);
 
     // compute center of gravity from focus group
     let n  = 0,
@@ -174,8 +178,21 @@ function focus(node, d, idx) {
         .duration(transition_duration)
         .call(zoom.translateTo, x0, y0);
 
-    // focus on root if no node or idx element provided
-    d3.select(node ? node : nodes[idx]).classed('is-focused', true);
+    // highlight focused node by dropping shadow around it
+    node = node ? node : nodes[idx];
+
+    d3.select(node)
+        .classed('is-focused', true)
+
+    filters.selectAll('circle').remove();
+
+    // drop shadow
+    filters
+        .append('circle')
+        .attr('cx', d.x )
+        .attr('cy', d.y )
+        .attr('r', offset)
+        .classed('focus-node', true);
 }
 
 /**

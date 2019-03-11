@@ -30,3 +30,10 @@
     z-index: 1 !important;
 }
 
+.filters circle.focus-node {
+    fill: none;
+
+    stroke: cornflowerblue;
+    stroke-opacity: 0.6;
+    stroke-width: 3px;
+}
