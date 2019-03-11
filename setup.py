@@ -41,7 +41,7 @@ setup(
     package_data={
         'thoth.lab.viz': [
             *list(glob.iglob('assets/**/*.css', recursive=True)),
-            *list(glob.iglob('assets/**/*.js', recursive=True))
+            *list(glob.iglob('assets/**/*.js',  recursive=True))
         ]
     },
     zip_safe=False,
