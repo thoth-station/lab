@@ -34,11 +34,16 @@ let layout = d3.tree()
 
 layout(root);
 
-let svg = d3.select(element.get(0)).append('svg')
+let zoom = d3.zoom()
+    .scaleExtent([1 / 2, 4])
+    .on('zoom', () => svg.attr('transform', d3.event.transform));
+
+let area = d3.select(element.get(0)).append('svg')
     .attr('width', width)
     .attr('height', height)
-    .append('g')
-    .attr('transform', `translate(0, ${margin.top})`);
+    .call(zoom);  // attach zoom event listener
+
+let svg = area.append('g');
 
 // declare globaly for future reference
 let nodes  = null,
@@ -47,14 +52,17 @@ let nodes  = null,
 let nodes_group = svg.append('g').attr('class', 'nodes'),
     links_group = svg.append('g').attr('class', 'links');
 
-update(root); // initial draw
+
+update(root);  // initial draw
+
+// set focus on root node
+focus(null, root, 0);
 
 
 /**
-  * Update diagonal layout
-  */
+ * Update diagonal layout
+ */
 function update(source) {
-
     console.debug("Layout update triggered", arguments);
 
     // node circles
@@ -120,14 +128,12 @@ function update(source) {
     links
         .exit()
         .remove();
-
 }
 
-// Collapsing and expanding nodes
 
 /**
-  * Handle node click event
-  */
+ * Handle node click event
+ */
 function click(d, i) {
     console.debug("Node event triggered: \t", click, arguments);
 
@@ -137,16 +143,17 @@ function click(d, i) {
         toggleChildren(this, d, i);
     }
     else if (!node.classed('is-focused')) {
-        focus(this, d);
+        focus(this, d, i);
     } else toggleChildren(this, d, i);  // toggle children (if applicable)
 }
 
 /**
-  * Focus on node by moving it closer to center in the viewport
-  *
-  * @param node clicked node element
-  * @param d {object} Node data
-  */
+ * Focus on node by moving it closer to center in the viewport
+ *
+ * @param node clicked node element
+ * @param d {object} Node data
+ * @param idx {object} Node index
+ */
 function focus(node, d, idx) {
     // remove focus from all previous nodes
     d3.selectAll('.is-focused').classed('is-focused', false);
@@ -162,26 +169,22 @@ function focus(node, d, idx) {
         y0 = d.y / n + y0 * (1 - 1/n);
     });
 
-    // update layout -- center on focus group
-    let translation_vector = {
-        x: width  / 2 - x0,
-        y: (height + margin.top) / 2 - y0
-    };
+    area
+        .transition()
+        .duration(transition_duration)
+        .call(zoom.translateTo, x0, y0);
 
-    svg
-      .transition().duration(transition_duration)
-      .attr("transform", `translate(${translation_vector.x}, ${translation_vector.y})`);
-
-    d3.select(node).classed('is-focused', true);
+    // focus on root if no node or idx element provided
+    d3.select(node ? node : nodes[idx]).classed('is-focused', true);
 }
 
 /**
-  * Toggle visibility of children nodes
-  *
-  * @param node clicked node element
-  * @param d {object} Node data
-  * @param idx {number} Node index
-  */
+ * Toggle visibility of children nodes
+ *
+ * @param node clicked node element
+ * @param d {object} Node data
+ * @param idx {number} Node index
+ */
 function toggleChildren(node, d, idx) {
     // Check if the node has children
     console.debug(d);
