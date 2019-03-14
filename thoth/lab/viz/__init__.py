@@ -16,11 +16,10 @@ _THIS_DIR = Path(__file__).parent
 _DEFAULT_CSS_DIR = _THIS_DIR / Path("assets/css")
 _DEFAULT_LIBRARIES = {
     'd3': 'https://d3js.org/d3.v5.min',
-    'd3-hierarchy': 'https://d3js.org/d3-hierarchy.v1.min'
 }
 
 
-def init_notebook_mode(custom_css: list = None, custom_libs: dict = None):
+def init_notebook_mode(custom_css: list = None, custom_libs: dict = None, reload=False):
     """Initialize notebook mode by linking required d3 libraries.
 
     :param custom_css: list of custom css urls to link
@@ -35,7 +34,12 @@ def init_notebook_mode(custom_css: list = None, custom_libs: dict = None):
         ```
 
         Please note that <path> does __NOT__ contain `.js` suffix.
+
+    :param reload: bool, whether to re-initialize requireJS object
     """
+    if reload:
+        require.reload()  # reload the require
+
     required_libraries = custom_libs or {}
     required_libraries.update(_DEFAULT_LIBRARIES)
 
