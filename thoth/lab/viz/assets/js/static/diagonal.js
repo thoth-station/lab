@@ -13,7 +13,7 @@
 const margin = { top: 80, right: 20, bottom: 80, left: 20 };
 
 // svg proportions
-const width  = $('#notebook-container').width() - 120;  // jupyter notebook margin
+const width  = $(element).width();
 const height = 640;
 
 const radius = 11;
@@ -42,7 +42,8 @@ let svg = d3.select(element.get(0)).append('svg')
     .attr('width', width)
     .attr('height', height)
     .append('g')
-    .attr('transform', `translate(0, ${margin.top})`);
+    .attr('transform',
+          `translate(-${margin.left + margin.right}, +${margin.top})`);
 
 let nodes = svg.append('g').attr('class', 'nodes'),
     links = svg.append('g').attr('class', 'links');
