@@ -4,10 +4,13 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+ipython = "*"
+jupyter-require = "*"
 networkx = "*"
 requests = "*"
 pandas = "*"
 plotly = "*"
+gremlinpython = "*"
 
 [dev-packages]
 coala-bears = "*"

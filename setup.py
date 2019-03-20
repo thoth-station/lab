@@ -37,11 +37,7 @@ setup(
         'thoth.{subpackage}'.format(subpackage=p)
         for p in find_packages('thoth/')
     ],
-    zip_safe=False,
+    include_package_data=True,
     install_requires=get_install_requires(),
-    command_options={
-        'build_sphinx': {
-            'version': ('setup.py', VERSION),
-        }
-    }
+    zip_safe=False
 )

@@ -1,0 +1,60 @@
+/* d3.css */
+
+/* controls */
+
+.controls {
+    padding: 10px
+}
+
+.icon {
+    cursor: pointer;
+}
+
+.tooltip {
+    margin: 0.25rem 0;
+
+    top: 4rem;
+    text-align: center;
+}
+
+/* links */
+
+.links {
+    fill: none;
+    stroke: #ccc;
+    stroke-width: 1px;
+
+}
+
+/* nodes */
+
+.nodes {
+    fill: darkslateblue;
+    stroke: none;
+
+    cursor: pointer;
+}
+
+.nodes circle.is-leaf {
+    fill-opacity: 0;  /* transparent fill */
+
+    stroke: darkslateblue;
+    stroke-width: 2px;
+
+    cursor: default;
+}
+
+.nodes text {
+    font: 13px sans-serif;
+
+    z-index: 1 !important;
+}
+
+
+.filters circle.focus-node {
+    fill: none;
+
+    stroke: cornflowerblue;
+    stroke-opacity: 0.6;
+    stroke-width: 3px;
+}

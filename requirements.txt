@@ -1,3 +1,5 @@
+gremlinpython
+jupyter_require
 networkx
 requests
 pandas
