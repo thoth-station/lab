@@ -5,12 +5,17 @@ name = "pypi"
 
 [packages]
 ipython = "*"
-jupyter-require = "*"
+ipykernel = "*"
+gremlinpython = "*"
 networkx = "*"
-requests = "*"
 pandas = "*"
 plotly = "*"
-gremlinpython = "*"
+cufflinks = "*"
+matplotlib = "*"
+
+# nbextensions
+jupyter-require = "*"
+jupyter_contrib_nbextensions = "*"  # needed by pipenv shell
 
 [dev-packages]
 coala-bears = "*"
