@@ -5,8 +5,6 @@ from pathlib import Path
 from setuptools import find_packages
 from setuptools import setup
 
-_ASSETS_DIR = Path('assets/')
-
 
 def get_install_requires():
     with open('requirements.txt', 'r') as requirements_file:
@@ -39,18 +37,7 @@ setup(
         'thoth.{subpackage}'.format(subpackage=p)
         for p in find_packages('thoth/')
     ],
-    package_data={
-        'thoth.lab.viz': [
-            'assets/css/*.css',
-            'assets/js/dynamic/*.js',
-            'assets/js/static/*.js',
-        ]
-    },
-    zip_safe=False,
+    include_package_data=True,
     install_requires=get_install_requires(),
-    command_options={
-        'build_sphinx': {
-            'version': ('setup.py', VERSION),
-        }
-    }
+    zip_safe=False
 )
