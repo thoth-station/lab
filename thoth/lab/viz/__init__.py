@@ -47,7 +47,7 @@ def init_notebook_mode(custom_css: list = None, custom_libs: dict = None, reload
     config = custom_libs or {}
     config.update(_DEFAULT_CONFIG)
 
-    REQUIRED_LIBRARIES.add(config.keys())
+    REQUIRED_LIBRARIES.update(config.keys())
 
     # required styles
     style_css = '\n'.join([
