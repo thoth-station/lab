@@ -7,7 +7,7 @@
 
 const margin = { top: 80, right: 20, bottom: 80, left: 20 };
 
-// canvas proportions
+// svg proportions
 const width  = $(element).width();  // jupyter notebook margin
 const height = 640;
 
@@ -23,7 +23,7 @@ $(element).empty();  // clear output
 
 /* Drawing area setup */
 
-let area = d3.select(element.get(0));
+let area = d3.select($(element).get(0));
 
 /* Controls */
 
@@ -32,44 +32,52 @@ let controls = area.append('div')
     .classed('controls', true);
 
 let button_reset = controls.append('a')
-    .attr('class', 'button btn-reset')
+    .attr('class', 'button btn-home')
     .append('span')
     .attr('class', 'icon')
     .append('i')
-    .attr('class', 'fas fa-refresh');
+    .attr('class', 'fas fa-home');
 
 let button_reset_tooltip = button_reset.append('span')
     .attr('class', 'tooltip')
-    .text("Reset view");
+    .text("Default view");
 
 /* SVG Canvas */
 
 let zoom = d3.zoom()
+    .extent(() => {
+        const rect = $(element).get(0).getBoundingClientRect();
+
+        return [[0, 0], [rect.width, rect.height - margin.top]];
+    })
     .scaleExtent([1 / 2, 4])
     .on('zoom', () => {
-        let x = d3.event.transform.x - margin.left,
-            y = d3.event.transform.y + margin.top,
+        let x = d3.event.transform.x,
+            y = d3.event.transform.y,
             k = d3.event.transform.k;
-        canvas.attr('transform',
-                    `translate(${x}, ${y}) scale(${k})`);
+
+        g.attr('transform',
+               `translate(${x}, ${y + margin.top / 2}) scale(${k})`);
     });
 
 let svg = area.append('svg')
     .style('width', width)
     .style('height', height)
-    .call(zoom);  // attach zoom event listener
+    .call(zoom)
+    .call(zoom, d3.zoomIdentity.translate(0, margin.top));
 
-let canvas = svg.append('g');
+let g = svg.append('g');
+
 
 // filter group should be first (due to overlay)
-let filters = canvas.append('g').attr('class', 'filters');
+let filters = g.append('g').attr('class', 'filters');
 
 // declare globaly for future reference
 let nodes  = null,
     labels = null;
 
-let nodes_group  = canvas.append('g').attr('class', 'nodes'),
-    links_group  = canvas.append('g').attr('class', 'links');
+let nodes_group  = g.append('g').attr('class', 'nodes'),
+    links_group  = g.append('g').attr('class', 'links');
 
 /* Draw */
 
@@ -103,9 +111,6 @@ button_reset
 
 
 update(root);  // initial draw
-
-// position the canvas svg
-zoom.translateTo(svg, 0, 0);
 
 // set focus on root node
 focus(null, root, 0);
@@ -242,7 +247,7 @@ function focus(node, d, idx) {
     svg
         .transition()
         .duration(transition_duration)
-        .call(zoom.translateTo, x0, y0 + margin.top);
+        .call(zoom.translateTo, x0, y0);
 
     // highlight focused node by dropping shadow around it
     node = node ? node : nodes[idx];

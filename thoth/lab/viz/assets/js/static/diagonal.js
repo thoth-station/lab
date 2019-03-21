@@ -32,21 +32,21 @@ let root = d3.stratify()
 
 let layout = d3.$$layout()
     .size([
-        width  - margin.right   - margin.left,
-        height - margin.top - margin.bottom
+        width  - margin.right - margin.left,
+        height - margin.top   - margin.bottom
     ]);
 
 layout(root); console.debug("Root: ", root);
 
 let svg = d3.select(element.get(0)).append('svg')
     .attr('width', width)
-    .attr('height', height)
-    .append('g')
-    .attr('transform',
-          `translate(-${margin.left + margin.right}, +${margin.top})`);
+    .attr('height', height);
 
-let nodes = svg.append('g').attr('class', 'nodes'),
-    links = svg.append('g').attr('class', 'links');
+let g = svg.append('g')
+    .attr('transform', `translate(0, ${margin.top})`);
+
+let nodes = g.append('g').attr('class', 'nodes'),
+    links = g.append('g').attr('class', 'links');
 
 // node circles
 nodes
