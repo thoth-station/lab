@@ -59,11 +59,11 @@
         },
         "gremlinpython": {
             "hashes": [
-                "sha256:787f66339aae60c11ec5d06355989a2d5736ebca3051106ffea12bc45a0eba77",
-                "sha256:c5bad5042429fc947c12e7c09568057c511e68a5fabe21284a32e23b50bf8f01"
+                "sha256:2e644d451d4a2f9664f9c26903588217a331f72d73bf2afe3fb36ea40ffdf7c8",
+                "sha256:66a027043d32cc45b5ef0fe8a34716617b761ffe07eee61962d74f7acd304606"
             ],
             "index": "pypi",
-            "version": "==3.4.0"
+            "version": "==3.4.1"
         },
         "idna": {
             "hashes": [
@@ -86,6 +86,13 @@
                 "sha256:eb2e116e75ecef9d4d228fdc66af54269afa26ab4463042e33785b887c628ba8"
             ],
             "version": "==0.2.0"
+        },
+        "isodate": {
+            "hashes": [
+                "sha256:2e364a3d5759479cdb2d37cce6b9376ea504db2ff90252a2e5b7cc89cc9ff2d8",
+                "sha256:aa4d33c06640f5352aca96e4b81afd8ab3b47337cc12089822d6f322ac772c81"
+            ],
+            "version": "==0.6.0"
         },
         "jedi": {
             "hashes": [
