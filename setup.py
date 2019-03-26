@@ -39,5 +39,10 @@ setup(
     ],
     include_package_data=True,
     install_requires=get_install_requires(),
-    zip_safe=False
+    zip_safe=False,
+    command_options={
+        'build_sphinx': {
+            'version': ('setup.py', VERSION),
+        }
+    },
 )
