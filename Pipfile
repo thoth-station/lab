@@ -6,9 +6,14 @@ name = "pypi"
 [packages]
 ipython = "*"
 ipykernel = "*"
+requests = "*"
+
 gremlinpython = "*"
 networkx = "*"
+
 pandas = "*"
+
+# visualizations
 plotly = "*"
 cufflinks = "*"
 matplotlib = "*"
