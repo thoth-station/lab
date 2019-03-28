@@ -1,6 +1,17 @@
-gremlinpython
-jupyter_require
-networkx
+ipython
+ipykernel
 requests
+
+gremlinpython
+networkx
+
 pandas
-plotly
+
+# visualizations
+# plotly
+# cufflinks
+# matplotlib
+
+# nbextensions
+jupyter-require
+jupyter_contrib_nbextensions  # needed by pipenv shell

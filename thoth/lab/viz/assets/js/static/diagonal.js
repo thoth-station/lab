@@ -13,7 +13,7 @@
 const margin = { top: 80, right: 20, bottom: 80, left: 20 };
 
 // svg proportions
-const width  = $('#notebook-container').width() - 120;  // jupyter notebook margin
+const width  = $(element).width();
 const height = 640;
 
 const radius = 11;
@@ -32,20 +32,21 @@ let root = d3.stratify()
 
 let layout = d3.$$layout()
     .size([
-        width  - margin.right   - margin.left,
-        height - margin.top - margin.bottom
+        width  - margin.right - margin.left,
+        height - margin.top   - margin.bottom
     ]);
 
 layout(root); console.debug("Root: ", root);
 
 let svg = d3.select(element.get(0)).append('svg')
     .attr('width', width)
-    .attr('height', height)
-    .append('g')
+    .attr('height', height);
+
+let g = svg.append('g')
     .attr('transform', `translate(0, ${margin.top})`);
 
-let nodes = svg.append('g').attr('class', 'nodes'),
-    links = svg.append('g').attr('class', 'links');
+let nodes = g.append('g').attr('class', 'nodes'),
+    links = g.append('g').attr('class', 'links');
 
 // node circles
 nodes

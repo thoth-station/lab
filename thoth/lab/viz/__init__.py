@@ -5,7 +5,7 @@ import pandas as pd
 
 from pathlib import Path
 
-from jupyter_require.core import execute_js
+from jupyter_require.core import execute_with_requirements
 from jupyter_require.core import require
 from jupyter_require.core import link_css
 from jupyter_require.core import load_css
@@ -14,9 +14,11 @@ from jupyter_require.core import load_css
 _THIS_DIR = Path(__file__).parent
 
 _DEFAULT_CSS_DIR = _THIS_DIR / Path("assets/css")
-_DEFAULT_LIBRARIES = {
+_DEFAULT_CONFIG = {
     'd3': 'https://d3js.org/d3.v5.min',
 }
+
+REQUIRED_LIBRARIES: set = {'d3'}
 
 
 def init_notebook_mode(custom_css: list = None, custom_libs: dict = None, reload=False):
@@ -37,11 +39,15 @@ def init_notebook_mode(custom_css: list = None, custom_libs: dict = None, reload
 
     :param reload: bool, whether to re-initialize requireJS object
     """
+    global REQUIRED_LIBRARIES
+
     if reload:
         require.reload()  # reload the require
 
-    required_libraries = custom_libs or {}
-    required_libraries.update(_DEFAULT_LIBRARIES)
+    config = custom_libs or {}
+    config.update(_DEFAULT_CONFIG)
+
+    REQUIRED_LIBRARIES.update(config.keys())
 
     # required styles
     style_css = '\n'.join([
@@ -63,7 +69,7 @@ def init_notebook_mode(custom_css: list = None, custom_libs: dict = None, reload
         link_css(stylesheet)
 
     # required libraries
-    return require.config(required_libraries)
+    return require.config(config)
 
 
 def plot(data: pd.DataFrame,
@@ -73,10 +79,9 @@ def plot(data: pd.DataFrame,
     """Syntactic sugar which wraps static plot visualizations."""
     js: str = _get_js_template(kind, static=True)
 
-    return execute_js(js,
-                      data=data.to_csv(index=False),
-                      layout=layout,
-                      **kwargs)
+    return execute_with_requirements(
+        js, required=list(REQUIRED_LIBRARIES),
+        data=data.to_csv(index=False), layout=layout, **kwargs)
 
 
 def iplot(data: pd.DataFrame,
@@ -86,10 +91,9 @@ def iplot(data: pd.DataFrame,
     """Syntactic sugar which wraps dynamic plot visualizations."""
     js: str = _get_js_template(kind, static=False)
 
-    return execute_js(js,
-                      data=data.to_csv(index=False),
-                      layout=layout,
-                      **kwargs)
+    return execute_with_requirements(
+        js, required=list(REQUIRED_LIBRARIES),
+        data=data.to_csv(index=False), layout=layout, **kwargs)
 
 
 def _get_js_template(kind: str, static: bool = True) -> str:
