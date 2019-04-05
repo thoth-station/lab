@@ -16,6 +16,7 @@
 
 """Pandas common operations and utilities."""
 
+import typing
 import pandas as pd
 
 from pandas import api
@@ -27,7 +28,10 @@ class _Underscore(object):
     def __init__(self, df):
         self._df: pd.DataFrame = df
 
-    def str_join(self, cols: list = None, sep: str = ''):
+    def str_join(self,
+                 cols: typing.List[str] = None,
+                 *,
+                 sep: str = ''):
         """Combine two or more columns into one joining them with separator."""
         cols = cols or self._df.columns
 
@@ -42,4 +46,4 @@ class _Underscore(object):
                 [col for col in str_row if stringify(col) is not None]
             )
 
-        self._df = self._df[cols].apply(lambda r: safe_join(r), axis=1)
+        return self._df[cols].apply(lambda r: safe_join(r), axis=1)
