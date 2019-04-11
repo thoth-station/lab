@@ -16,6 +16,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 """Various utilities for notebooks."""
+
 import typing
 
 from functools import partial
@@ -133,15 +134,13 @@ def _rhas(fhas, fget, obj: typing.Any, attr: str) -> bool:
 def _rget(f,
           obj: typing.Any,
           attr: str,
-          repl_missing: typing.Any = None,
-          raise_if_missing: bool = False) -> typing.Any:
+          default: typing.Any = DEFAULT) -> typing.Any:
     """Recursively retrieve nested attributes of an object.
 
     :param f: callable, function to be used as `getattr`
     :param obj: Any, object to check
     :param attr: str, attribute to find declared by dot notation accessor
-    :param repl_missing: bool, whether to raise on missing attribute
-    :param raise_if_missing:
+    :param default: default attribute, similar to getattr's default
     :return: Any, retrieved attribute
     """
     if isinstance(obj, (list, set)):
@@ -149,7 +148,7 @@ def _rget(f,
             return None
 
         return [
-            _rget(f, item, attr, repl_missing, raise_if_missing)
+            _rget(f, item, attr, default=default)
             for item in obj
         ]
 
@@ -163,17 +162,18 @@ def _rget(f,
     else:
         left = attr
 
+    try:
+        result = f(obj, left)
+    except (AttributeError, KeyError) as exc:
+        if default is not DEFAULT:
+            return default
+
+        raise exc
+
     if not right:
-        try:
-            return f(obj, attr)
+        return result
 
-        except (AttributeError, KeyError) as exc:
-            if raise_if_missing:
-                raise exc
-
-            return repl_missing
-
-    return _rget(f, f(obj, left), right, repl_missing, raise_if_missing)
+    return _rget(f, result, right, default=default)
 
 
 def has(obj, attr):
@@ -190,7 +190,7 @@ def has(obj, attr):
 
 def get(obj, attr, *, default: typing.Any = DEFAULT):
     """Combine both `getattr` and `dict.get` into universal `get`."""
-    _getattr = getattr if default is DEFAULT else partial(getattr, default=default)
+    _getattr = getattr if default is DEFAULT else lambda x, a: getattr(x, a, default)
     _get = dict.get if default is DEFAULT else partial(dict.get, default=default)
 
     try:
@@ -198,9 +198,7 @@ def get(obj, attr, *, default: typing.Any = DEFAULT):
 
     except AttributeError as exc:
         if isinstance(obj, dict):
-            return _get(obj, attr, default, )
-        elif default is not DEFAULT:
-            return default
+            return _get(obj, attr)
 
         raise exc
 
