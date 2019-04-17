@@ -80,10 +80,10 @@ class _Underscore(object):
         if dtype is None:
             return self._df
 
-        if isinstance(dtype(), typing.Mapping):
+        if issubclass(dtype, typing.Mapping):
             df_flat = self._df[col]._.flatten(record_paths, columns=columns, **kwargs)
 
-        elif isinstance(dtype(), (list, set, tuple)):
+        elif issubclass(dtype, (list, set, tuple)):
             stacked: pd.Series = self._df[col]._.vstack()
             df_flat = pd.DataFrame(stacked, columns=columns, **kwargs)
 
