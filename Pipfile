@@ -24,3 +24,4 @@ jupyter_contrib_nbextensions = "*"  # needed by pipenv shell
 
 [dev-packages]
 coala-bears = "*"
+autopep8 = "*"
