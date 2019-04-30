@@ -20,11 +20,38 @@
 import asyncio
 import typing
 
+import networkx as nx
+import pandas as pd
+
+from collections import OrderedDict
+
 from gremlin_python.structure.graph import Graph
 from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
-import pandas as pd
-from plotly.offline import init_notebook_mode, iplot
+
 import plotly.graph_objs as go
+from plotly.offline import init_notebook_mode, iplot
+
+
+class DependencyGraph(nx.OrderedDiGraph):
+    node_dict_factory = OrderedDict
+    adjlist_dict_factory = OrderedDict
+
+    @staticmethod
+    def get_root(tree):
+        """Return root of the current graph, if any.
+
+        By default, tree topology is considered as input,
+        so if there are multiple roots, only the first one is returned.
+        """
+        root = None
+        for node, d in tree.in_degree():
+            root = node
+            break;
+
+        return root
+
+get_root = DependencyGraph.get_root
+get_root.__doc__ = DependencyGraph.get_root.__doc__
 
 
 class GraphQueryResult(object):
