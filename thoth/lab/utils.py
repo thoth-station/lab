@@ -25,11 +25,13 @@ from pkgutil import walk_packages
 from urllib.parse import urlparse
 
 import importlib
+import requests
 import urllib3
 
-import requests
+import numpy as np
 import pandas as pd
 
+from typing import Iterable, Union
 
 DEFAULT = object()
 
@@ -105,6 +107,68 @@ def packages_info(thoth_packages: bool = True) -> pd.DataFrame:
         importable.append(import_successful)
 
     return pd.DataFrame(data={'package': packages, 'version': versions, 'importable': importable})
+
+
+def scale_colour_continuous(arr: Iterable,
+                            colour_palette=None,
+                            n_colours: int = 10,
+                            norm=False):
+    """Scale given arrays into colour array by specific palette.
+
+    The default number of colours is 10, which translates to
+    dividing an array on a scale from 0 to 1 into 0.1 colour bins.
+    """
+    import seaborn as sns
+    from matplotlib.colors import ListedColormap
+
+#     colour_palette = colour_palette or sns.diverging_palette(
+#         10, 130, 80, 50, 25, n=n_colours, as_cmap=True)
+    # better have the yellow in the middle
+    colour_palette = colour_palette or sns.color_palette('RdYlGn', n_colors=n_colours)
+    colour_map = ListedColormap(colour_palette.as_hex())
+
+    array_normalized = arr
+    if norm:
+        array = np.array(arr)
+        array_dim = len(array.shape)
+        assert array_dim == 1
+
+        array_normalized = (array - np.min(array)) / (np.max(array) - np.min(array))
+
+    return sns.color_palette(
+        [colour_map(x) for x in array_normalized]).as_hex()
+
+
+def highlight(df: pd.DataFrame, content: str = None, column_class: str = None, colours: Union[list, str] = None):
+    """Highlight rows of `content` column of a given DataFrame.
+
+    Highlight can be based on `column_class` or custom `colours` provided.
+    """
+    from IPython.core.display import HTML
+
+    html = []
+    if colours is not None:
+        colours = colours if isinstance(colours, list) else df[colours]
+
+        assert len(colours) == len(df)
+    else:
+        colours = []
+
+    line_template = """
+        <span><pre style="background-color: {col};" class="{cls}">{idx: <3} | {content}</pre></span>
+    """
+
+    for idx, row in df.iterrows():
+        line = line_template.format(
+            col=colours[idx] if len(colours) > 0 else "",
+            cls=row[column_class]  if column_class else "",
+            idx=idx,
+            content=row[content]
+        )
+
+        html.append(line)
+
+    return HTML('<br>'.join(html))
 
 
 def _rhas(fhas, fget, obj: typing.Any, attr: str) -> bool:
