@@ -12,6 +12,9 @@ gremlinpython = "*"
 networkx = "*"
 
 pandas = "*"
+pandas-profiling = "*"
+
+prettyprinter = "*"
 
 # visualizations
 plotly = "*"

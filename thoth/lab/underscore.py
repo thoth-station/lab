@@ -16,13 +16,20 @@
 
 """Pandas common operations and utilities."""
 
+import logging
+import re
 import typing
+
+import numpy as np
 import pandas as pd
 
 from pandas import api
 
 from thoth.lab.utils import DEFAULT
+from thoth.lab.utils import resolve_query
 from thoth.lab.utils import rget
+
+logger = logging.getLogger("thoth.lab.underscore")
 
 
 @pd.api.extensions.register_dataframe_accessor("_")
@@ -55,7 +62,7 @@ class _Underscore(object):
         **kwargs,
     ) -> pd.DataFrame:
         """Flatten specific column of dictionaries or lists by extracting records from each entry.
-        
+
         If the column contains dictionaries, they will be flatten into columns. If the column
         contains lists, they will be flatten into rows.
 
@@ -66,7 +73,7 @@ class _Underscore(object):
 
         # validate
         dtype = None
-        for idx, entry in self._df[col].iteritems():
+        for _, entry in self._df[col].iteritems():
             entry_type = type(entry)
 
             if pd.isna(dtype):
@@ -110,7 +117,7 @@ class _Underscore(object):
 
     def vstack(self, columns: typing.Union[str, list], inplace: bool = False, **kwargs) -> pd.DataFrame:
         """Stack column containing list of records vertically.
-        
+
         Note: The columns are stacked in order, please, have in mind
         that there is combinatorial expansion of those columns.
 
@@ -139,6 +146,133 @@ class _Underscore(object):
             return sep.join([col for col in str_row if stringify(col) is not None])
 
         return self._df[cols].apply(lambda r: safe_join(r), axis=1)
+
+    def groupby(
+        self,
+        groupby: typing.Union[str, list, set] = None,
+        exclude: typing.Union[str, list, set] = None,
+        as_group: bool = False,
+        as_index: bool = False,
+        **kwargs,
+    ) -> typing.Any:
+        """Group DataFrame columns given column sub-strings and optionally create MultiIndex."""
+        groupby = groupby or []
+        exclude = exclude or []
+
+        if isinstance(groupby, str):
+            groupby = [groupby]
+
+        if isinstance(exclude, str):
+            exclude = [exclude]
+
+        groups = []
+
+        for key in groupby:
+            columns_idx = self._df.columns.str.contains(key)
+            columns = self._df.columns[columns_idx]
+
+            if not len(columns):
+                raise KeyError(f"Could NOT find suitable column given the keys: `{groupby}`")
+
+            groups.extend(columns)
+
+        index_groups = []
+
+        for col in self._df[groups].columns:
+            # check that the column name is not excluded
+            if any(re.search(e, col) for e in exclude):
+                continue
+
+            if self._is_valid_group(self._df, col):
+                index_groups.append(col)
+
+        index_groups = pd.Series(index_groups).unique().tolist()
+
+        # construct multi-index if grouping is requested
+        group = self._df.groupby(index_groups, **kwargs)
+
+        if as_group:
+            return group
+
+        indices = group.indices
+
+        levels = []
+        for level, values in indices.items():
+            if isinstance(level, tuple):
+                levels.extend([(*level, v) for v in values])
+            else:
+                levels.extend([(level, v) for v in values])
+
+        index = pd.MultiIndex.from_tuples(levels, names=[*index_groups, None])
+
+        if as_index:
+            return index
+
+        return self._df.set_index(index).drop(index_groups, axis=1).sort_index(level=-1)
+
+    def query(
+        self,
+        query: str = None,
+        *,
+        groupby: typing.Union[str, list, set] = None,
+        exclude: typing.Union[str, list, set] = None,
+        like: str = None,
+        regex: str = None,
+        axis: int = None,
+        sort_index: typing.Union[bool, int, typing.List[int]] = True,
+        engine: str = None,
+        **kwargs,
+    ) -> pd.DataFrame:
+        """Query inspection DataFrame.
+
+        The order of operations is as follows:
+
+            query resolution -> grouping -> filtering
+
+        :param inspection_df: inspection DataFrame to be filtered as returned by `process_inspection_results`
+        :param groupby: column or list of columns to group the DataFrame by
+        :param exclude: patterns that should be excluded from grouping
+        :param query: pandas query to be evaluated on the filtered DataFrame
+        :param like, regex, axis: parameters passed to the `pd.DataFrame.filter` function
+        :param engine: engine to evaluate the query passed to `where` parameter, see `pd.eval` for more information
+
+            The string provided does NOT need to match the whole column name, the function tries to determine
+            the most suitable column name automatically.
+
+        :param kwargs: additional parameters passed to the `_.groupby` function
+        """
+        # resolve query
+        df = resolve_query(query=query, context=self._df)
+
+        if groupby:
+            df = df._.groupby(groupby=groupby, exclude=exclude, **kwargs)
+
+        # filter
+        if any([like, regex]):
+            df = df.filter(like=like, regex=regex, axis=axis)
+
+        if sort_index:
+            if isinstance(sort_index, bool):
+                levels = np.arange(df.index.nlevels - 1).tolist()
+            else:
+                levels = sort_index
+
+            return df.sort_index(level=levels)
+
+    @staticmethod
+    def _is_valid_group(df: pd.DataFrame, groupby: typing.Union[str, typing.List[str]]) -> bool:
+        """Check whether a group is valid for grouping and indexing."""
+        is_valid = False
+        try:
+            # check that grouping is possible
+            is_valid = len(df.groupby(groupby).indices) >= 1
+            if not is_valid:
+                logger.warning(f"Column '{groupby!s}' could NOT be used as index group. Dropped.")
+
+        except TypeError:
+            logger.warning(f"Column '{groupby!s}' dtype NOT understood. Dropped")
+
+        return is_valid
 
 
 @pd.api.extensions.register_series_accessor("_")
@@ -201,7 +335,7 @@ class _Underscore(object):
 
     def hstack(self, **kwargs) -> pd.DataFrame:
         """Stack column containing list of records horizontally.
-        
+
         Note, the stacking happens in sequence. If the list entries
         are of different length, it might lead to unexpected results.
 
