@@ -8,7 +8,6 @@ ipython = "*"
 ipykernel = "*"
 requests = "*"
 
-gremlinpython = "*"
 networkx = "*"
 
 pandas = "*"
