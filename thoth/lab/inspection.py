@@ -420,7 +420,7 @@ def make_subplots(data: pd.DataFrame, columns: List[str] = None, *, kind: str = 
 
         text: str = str(index_label)
 
-        annot["text"] = re.sub(r"^(.{%d}).*(.{%d})$" % (aw, aw), "\g<1>...\g<2>", text)
+        annot["text"] = re.sub(r"^(.{%d}).*(.{%d})$" % (aw, aw), "\g<1>...\g<2>", text)  # Ignore PycodestyleBear (W605)
         annot["hovertext"] = "<br>".join(pformat(index_label).split("\n"))
 
     # add axis titles as plot annotations

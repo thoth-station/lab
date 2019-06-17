@@ -100,7 +100,7 @@ class _Convert(object):
 
     def to_dependency_graph(self, root: typing.Any = None, source: str = "source", target: str = "target"):
         """Convert DataFrame to a dependency graph.
-        
+
         First a dependency table is build, see `build_dependency_table` for info about required parameters.
         """
         df = self.to_dependency_table(root=root, source=source, target=target).query("source != ''")

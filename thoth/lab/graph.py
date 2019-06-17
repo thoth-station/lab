@@ -33,6 +33,8 @@ from plotly.offline import init_notebook_mode, iplot
 
 
 class DependencyGraph(nx.OrderedDiGraph):
+    """Construct a dependency graph by extending nx.OrderedDiGraph."""
+
     node_dict_factory = OrderedDict
     adjlist_dict_factory = OrderedDict
 
@@ -46,9 +48,10 @@ class DependencyGraph(nx.OrderedDiGraph):
         root = None
         for node, d in tree.in_degree():
             root = node
-            break;
+            break
 
         return root
+
 
 get_root = DependencyGraph.get_root
 get_root.__doc__ = DependencyGraph.get_root.__doc__
