@@ -96,3 +96,9 @@
 * Introduce routing to get raw graph traversal object
 * Set default verify argument to False
 * State return value from the function
+
+## Release 0.1.1 (2019-07-11T13:26:56)
+* Relock to remove old libraries
+* Remove Gremlin imports
+* Remove gremlinpython from dependencies
+* Update Zuul config
