@@ -7,9 +7,9 @@ networkx
 pandas
 
 # visualizations
-# plotly
-# cufflinks
-# matplotlib
+plotly
+cufflinks
+matplotlib
 
 # nbextensions
 jupyter-require
