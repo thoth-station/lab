@@ -189,7 +189,7 @@ class _Underscore(object):
         index_groups = pd.Series(index_groups).unique().tolist()
 
         # construct multi-index if grouping is requested
-        group = self._df.groupby(index_groups, **kwargs)
+        group = self._df.groupby(index_groups, sort=False, **kwargs)
 
         if as_group:
             return group
@@ -208,7 +208,11 @@ class _Underscore(object):
         if as_index:
             return index
 
-        return self._df.set_index(index).drop(index_groups, axis=1).sort_index(level=-1)
+        return (self._df
+            .iloc[[idx[-1] for idx in levels]]
+            .set_index(index, drop=True, verify_integrity=True)
+            .drop(index_groups, axis=1)
+        )
 
     def query(
         self,
