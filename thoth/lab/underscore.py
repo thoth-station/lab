@@ -208,8 +208,8 @@ class _Underscore(object):
         if as_index:
             return index
 
-        return (self._df
-            .iloc[[idx[-1] for idx in levels]]
+        return (
+            self._df.iloc[[idx[-1] for idx in levels]]
             .set_index(index, drop=True, verify_integrity=True)
             .drop(index_groups, axis=1)
         )
