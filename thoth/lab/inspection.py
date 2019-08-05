@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-"""Inspection results processing ana analysis."""
+"""Inspection results processing and analysis."""
 
 import functools
 import logging
@@ -283,7 +283,7 @@ def create_duration_histogram(data: pd.DataFrame, columns: Union[str, List[str]]
     figure = data[columns].iplot(
         title=kwargs.pop("title", "InspectionRun distribution"),
         yTitle="count",
-        xTitle="durations [ms]",
+        xTitle="durations [s]",
         kind="hist",
         bins=int(np.ceil(bins)),
         asFigure=True,
