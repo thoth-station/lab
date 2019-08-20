@@ -1,5 +1,5 @@
 # thoth-lab
-# Copyright(C) 2018, 2019 Marek Cermak
+# Copyright(C) 2018, 2019 Marek Cermak, Francesco Murdaca
 #
 # This program is free software: you can redistribute it and / or modify
 # it under the terms of the GNU General Public License as published by
@@ -457,13 +457,215 @@ def show_categories(inspection_df: pd.DataFrame):
     """List categories in the given DataFrame."""
     index = inspection_df.index.droplevel(-1).unique()
 
+    results_categories = {}
     for n, idx in enumerate(index.values):
-        print("\nCategory {}/{}".format(n + 1, len(index)))
+        print("\nClass {}/{}".format(n + 1, len(index)))
+        
+        class_results = {}
         if len(index.names) > 1:
             for name, ind in zip(index.names, idx):
                 print(f"{name} :", ind)
+                class_results[name] = ind
         else:
             print(f"{index.names[0]} :", idx)
+            class_results[index.names[0]] = idx
+        results_categories[n + 1] = class_results
 
         frame = inspection_df.loc[idx]
         print("Number of rows (jobs) is:", frame.shape[0])
+        
+    return results_categories
+
+
+def filter_inspection_list(ids_list: List[str], identifier_list: List[str]) -> dict: 
+    """Filter inspection ids list according to the identifier selected"""
+    filtered_list_ids = {}
+
+    for identifier in identifier_list:
+        filtered_list_ids[identifier] = []
+
+    for ids in ids_list:
+        inspection_filter = "-".join(ids.split("-")[1:(len(ids.split("-")) - 1)])
+
+        if inspection_filter:
+            if inspection_filter in identifier_list:
+                filtered_list_ids[inspection_filter].append(ids)
+
+    tot_inspections_selected = sum([len(batch_n) for batch_n in filtered_list_ids.values()])
+    inspection_batches = [(batch_name, len(batch_count)) for batch_name, batch_count in filtered_list_ids.items()]
+    print(f"There are {tot_inspections_selected} inspection runs!: {inspection_batches} respectively")
+    
+    return filtered_list_ids
+
+
+def create_inspection_analysis_plots(df_duration_batches: pd.DataFrame, batch_identifier: str):
+    "Create inspection analysis plots per batch"
+    # Box plots job duration and build duration
+    fig = inspection.create_duration_box(df_duration_batches[batch_identifier], ["build_duration", "job_duration"])
+
+    py.iplot(fig)
+    # Scatter job duration
+    fig = inspection.create_duration_scatter(
+        df_duration_batches[batch_identifier], "job_duration", title="InspectionRun job duration"
+    )
+
+    py.iplot(fig)
+    # Scatter build duration
+    fig = inspection.create_duration_scatter(
+        df_duration_batches[batch_identifier], "build_duration", title="InspectionRun build duration"
+    )
+
+    py.iplot(fig)
+    # Histogram
+    fig = inspection.create_duration_histogram(df_duration_batches[batch_identifier], ["job_duration"])
+
+    py.iplot(fig)
+
+
+def create_scatter_plots_for_multiple_batches(data: pd.DataFrame,
+                                  columns: Union[str, List[str]] = None,
+                                  list_batches: List[str] = [], 
+                                  title_scatter: str = "Scatter plot",
+                                  x_label: str = " ", 
+                                  y_label: str = " "):
+    """Create Scatter plots for multiple batches."""
+    columns = columns if columns is not None else data[columns].columns
+
+    figure = {
+    'data': [
+        {
+            'x': data[columns[0] + '_' + batch],
+            'y': data[columns[1] + '_' + batch],
+            'name': batch, 'mode': 'markers',
+        } for batch in list_batches
+    ],
+    'layout': {
+        'title': title_scatter,
+        'xaxis': {'title': x_label},
+        'yaxis': {'title': y_label}
+        }
+    }
+    
+    return figure
+
+
+def evaluate_statistics(df_batch: pd.DataFrame, parameter_name: str) -> Dict:
+    """Evaluate statistical quantities for plots"""
+    cv = df_batch[parameter_name].std()/df_batch[parameter_name].mean()*100
+    std_error = df_batch[parameter_name].std()/np.sqrt(df_batch[parameter_name].shape[0])
+    std = df_batch[parameter_name].std()
+    median = df_batch[parameter_name].median()
+    q = df_batch[parameter_name].quantile([.25, .75])
+    q1 =  q[0.25]
+    q3 =  q[0.75]
+    IQR = q3 - q1
+    maxr = df_batch[parameter_name].max()
+    minr = df_batch[parameter_name].min()
+
+    return {"cv": cv,
+            "std_error": std_error,
+            "std": std,
+            "median": median,
+            "q1":q1,
+            "q3": q3,
+            "iqr": IQR,
+            "max": maxr,
+            "min": minr}
+
+
+def evaluate_statistics_per_parameter_per_batch(dict_of_df_batches: dict, parameter: str) -> dict:
+    """Aggregate results of statistics per parameter from different inspection batches"""
+    results_statistics = {}
+    for identifier in identifier_inspection:
+        results_statistics[identifier] = evaluate_statistics(
+            df_batch=dict_of_df_batches[identifier],
+            parameter_name=parameter)
+        
+    results = {}
+    
+    for quantity in results_statistics[identifier].keys():
+        results[quantity] = [values[quantity] for values in results_statistics.values()]
+        
+    return results
+
+
+def plot_batches_statistics_interpolated_single_parameter(parameter_selected: str,
+                                                          colour_list: List,
+                                                          quantities: List,
+                                                          title_ylabel: str = " "):
+    """Plot interpolated statistics for different batches for a specific parameter"""
+    if len(colour_list) != len(quantities):
+        logger.exception(f"List of statistical quantities and List of colours need to have the same length!")
+    i = 0
+    parameter_results = dftotal_statistics[parameter_selected]
+    for quantity in quantities:
+        plt.plot(identifier_inspection, parameter_results[quantity], f'{colour[i]}o-', label=f'{quantity}')
+        i += 1
+    plt.xlabel('Batch Identifier')
+    plt.ylabel(title_ylabel)
+    plt.title(f'Statistics plot for {parameter_selected} of different batch')
+    plt.tick_params(axis='x', rotation=45)
+    plt.legend()
+    plt.show()
+
+
+def plot_batches_statistics_interpolated_multiple_parameters(parameters_selected: List,
+                                                              colour_list: List,
+                                                              quantity: str,
+                                                              title_ylabel: str = " "):
+    """Plot single interpolated statistics for different batches for multiple parameters"""
+    if len(colour_list) != len(parameters_selected):
+        logger.exception(f"List of parameters and List of colours need to have the same length!")
+    i = 0
+    for parameter in parameters_selected:
+        parameter_results = dftotal_statistics[parameter]
+        plt.plot(identifier_inspection, parameter_results[quantity], f'{colour[i]}o-', label=f'{parameter}')
+        i += 1
+    plt.xlabel('Batch Identifier')
+    plt.ylabel(title_ylabel)
+    plt.title(f'Statistics plot for {quantity} of different batch for different parameters')
+    plt.tick_params(axis='x', rotation=45)
+    plt.legend()
+    plt.show()
+
+# General functions
+
+def create_scatter_and_correlation(data: pd.DataFrame,
+                                  columns: Union[str, List[str]] = None,
+                                  title_scatter: str = "Scatter plot"):
+    """Create Scatter plot and evaluate correlation coefficients."""
+    columns = columns if columns is not None else data[columns].columns
+
+    figure = data[columns].iplot(
+        kind="scatter",
+        x=columns[0],
+        y=columns[1],
+        title=title_scatter,
+        xTitle=columns[0],
+        yTitle=columns[1],
+        mode='markers',
+        asFigure=True
+    )
+    
+    for correlation_type in ["pearson", "spearman", "kendall"]:
+        correlation_matrix = data[columns].corr(correlation_type)
+        print(f"\n{correlation_type} correlation results:\n{correlation_matrix}")
+    
+    return figure
+
+
+def create_box_plot(data: pd.DataFrame,
+               columns: Union[str, List[str]] = None,
+               title_box: str = "Box plot",
+               y_label: str = "Variable [Measurement Unit]",
+               static: str = False):
+    """Create duration Box plot."""
+    columns = columns if columns is not None else data[columns].columns     
+        
+    figure = data[columns].iplot(
+        kind="box", title=title_box, yTitle=y_label, asFigure=True
+    )
+
+    return figure
+
+
