@@ -92,6 +92,27 @@ def extract_keys_from_dataframe(df: pd.DataFrame, key: str):
     return ndf
 
 
+def filter_inspection_list(inspection_ids_list: List[str], inspection_identifier_list: List[str]) -> dict:
+    """Filter inspection ids list according to the inspection identifier selected."""
+    filtered_list_ids = {}
+
+    for identifier in inspection_identifier_list:
+        filtered_list_ids[identifier] = []
+
+    for ids in inspection_ids_list:
+        inspection_filter = "-".join(ids.split("-")[1 : (len(ids.split("-")) - 1)])
+
+        if inspection_filter:
+            if inspection_filter in inspection_identifier_list:
+                filtered_list_ids[inspection_filter].append(ids)
+
+    tot_inspections_selected = sum([len(batch_n) for batch_n in filtered_list_ids.values()])
+    inspection_batches = [(batch_name, len(batch_count)) for batch_name, batch_count in filtered_list_ids.items()]
+    _LOGGER.info(f"There are {tot_inspections_selected} inspection runs selected: {inspection_batches} respectively")
+
+    return filtered_list_ids
+
+
 def process_inspection_results(
     inspection_results: List[dict],
     exclude: Union[list, set] = None,
@@ -477,47 +498,54 @@ def show_categories(inspection_df: pd.DataFrame):
     return results_categories
 
 
-def filter_inspection_list(inspection_ids_list: List[str], inspection_identifier_list: List[str]) -> dict:
-    """Filter inspection ids list according to the inspection identifier selected."""
-    filtered_list_ids = {}
+def create_inspection_results_batches_dict(inspection_results: List[dict], inspection_results_list: List[str]) -> dict:
+    """Create dictionary with Dataframe of inspection results for each inspection identifier."""
+    inspection_results_batches_dict = {}
+    inspection_duration_results_batches_dict = {}
 
-    for identifier in inspection_identifier_list:
-        filtered_list_ids[identifier] = []
+    for identifier, inspection_results_list in inspection_results.items():
+        logger.info(f"Analyzing inspection batch: {identifier}")
+        print(f"Analyzing inspection batch: {identifier}")
 
-    for ids in inspection_ids_list:
-        inspection_filter = "-".join(ids.split("-")[1:(len(ids.split("-")) - 1)])
+        df = process_inspection_results(
+            inspection_results_list,
+            exclude=["build_log", "created", "inspection_id"],
+            apply=[("created|started_at|finished_at", pd.to_datetime)],
+            drop=False,
+        )
 
-        if inspection_filter:
-            if inspection_filter in inspection_identifier_list:
-                filtered_list_ids[inspection_filter].append(ids)
+        inspection_results_batches_dict[identifier] = df
 
-    tot_inspections_selected = sum([len(batch_n) for batch_n in filtered_list_ids.values()])
-    inspection_batches = [(batch_name, len(batch_count)) for batch_name, batch_count in filtered_list_ids.items()]
-    _LOGGER.info(f"There are {tot_inspections_selected} inspection runs selected: {inspection_batches} respectively")
+        df_duration = create_duration_dataframe(df)
+        inspection_duration_results_batches_dict[identifier] = df_duration
+        inspection_results_batches_dict[identifier]["job_duration"] = df_duration["job_duration"]
+        inspection_results_batches_dict[identifier]["build_duration"] = df_duration["build_duration"]
 
-    return filtered_list_ids
+    return inspection_results_batches_dict, inspection_duration_results_batches_dict
 
 
 def create_inspection_analysis_plots(df_inspection_batches_dict: dict, batch_identifier: str):
     """Create inspection analysis plots per batch."""
     # Box plots job duration and build duration
-    fig = inspection.create_duration_box(df_inspection_batches_dict[batch_identifier], ["build_duration", "job_duration"])
+    fig = create_duration_box(
+        df_inspection_batches_dict[batch_identifier], ["build_duration", "job_duration"]
+    )
 
     py.iplot(fig)
     # Scatter job duration
-    fig = inspection.create_duration_scatter(
+    fig = create_duration_scatter(
         df_inspection_batches_dict[batch_identifier], "job_duration", title="InspectionRun job duration"
     )
 
     py.iplot(fig)
     # Scatter build duration
-    fig = inspection.create_duration_scatter(
+    fig = create_duration_scatter(
         df_inspection_batches_dict[batch_identifier], "build_duration", title="InspectionRun build duration"
     )
 
     py.iplot(fig)
     # Histogram
-    fig = inspection.create_duration_histogram(df_inspection_batches_dict[batch_identifier], ["job_duration"])
+    fig = create_duration_histogram(df_inspection_batches_dict[batch_identifier], ["job_duration"])
 
     py.iplot(fig)
 
@@ -547,7 +575,9 @@ def create_scatter_plots_for_multiple_batches(
 def evaluate_statistics(df_inspection_batch: pd.DataFrame, inspection_parameter: str) -> Dict:
     """Evaluate statistical quantities of a specific inspection parameter."""
     cv = df_inspection_batch[inspection_parameter].std() / df_inspection_batch[inspection_parameter].mean() * 100
-    std_error = df_inspection_batch[inspection_parameter].std() / np.sqrt(df_inspection_batch[inspection_parameter].shape[0])
+    std_error = df_inspection_batch[inspection_parameter].std() / np.sqrt(
+        df_inspection_batch[inspection_parameter].shape[0]
+    )
     std = df_inspection_batch[inspection_parameter].std()
     median = df_inspection_batch[inspection_parameter].median()
     q = df_inspection_batch[inspection_parameter].quantile([0.25, 0.75])
@@ -581,45 +611,74 @@ def evaluate_statistics_per_parameter_per_batch(df_inspection_batches_dict: dict
     aggregated_statistics = {}
 
     for statistical_quantity in evaluated_statistics[identifier].keys():
-        aggregated_statistics[statistical_quantity] = [values[statistical_quantity] for values in evaluated_statistics.values()]
+        aggregated_statistics[statistical_quantity] = [
+            values[statistical_quantity] for values in evaluated_statistics.values()
+        ]
 
     return aggregated_statistics
 
 
-def plot_batches_statistics_interpolated_single_parameter(
-    parameter_selected: str, colour_list: List, quantities: List, title_ylabel: str = " "
+def plot_interpolated_statistics_of_inspection_parameters(
+    statistical_results_dict: dict,
+    inspection_parameters: List[str],
+    colour_list: List[str],
+    statistical_quantities: List[str],
+    title_ylabel: str = " ",
 ):
-    """Plot interpolated statistics for different batches for a specific parameter."""
-    if len(colour_list) != len(quantities):
-        logger.warning(f"List of statistical quantities and List of colours need to have the same length!")
-    parameter_results = dftotal_statistics[parameter_selected]
-    for i, quantity in enumerate(quantities):
-        plt.plot(identifier_inspection, parameter_results[quantity], f"{colour[i]}o-", label=f"{quantity}")
-        i += 1
+    """Plot interpolated statistical quantity/ies of  of inspection parameter/s from different inspection batches."""
+    if len(colour_list) != len(statistical_quantities):
+        logger.warning(f"List of statistical quantities and List of colours shall have the same length!")
+
+    if len(inspection_parameters) == 1 and len(statistical_quantities) >= 1:
+        parameter_results = statistical_results_dict[inspection_parameters[0]]
+        for i, quantity in enumerate(statistical_quantities):
+            plt.plot(identifier_inspection, parameter_results[quantity], f"{colour[i]}o-", label=quantity)
+        plt.title(f"Statistics plot for {inspection_parameters} of different batch")
+
+    elif len(inspection_parameters) >= 1 and len(statistical_quantities) == 1:
+        for i, parameter in enumerate(inspection_parameters):
+            parameter_results = dftotal_statistics[parameter]
+            plt.plot(
+                identifier_inspection, parameter_results[statistical_quantities[0]], f"{colour[i]}o-", label=parameter
+            )
+        plt.title(f"Statistics plot for {statistical_quantities} of different batch for different parameters")
+    else:
+        logger.warning(
+            """
+            Combinations allowed: 
+                - single inspection parameter | single or multiple statistical quantity/ies
+                - single or multiple inspection parameter/s | single statistical quantity
+            """
+        )
+
     plt.xlabel("Batch Identifier")
     plt.ylabel(title_ylabel)
-    plt.title(f"Statistics plot for {parameter_selected} of different batch")
     plt.tick_params(axis="x", rotation=45)
     plt.legend()
     plt.show()
 
 
-def plot_batches_statistics_interpolated_multiple_parameters(
-    parameters_selected: List, colour_list: List, quantity: str, title_ylabel: str = " "
-):
-    """Plot single interpolated statistics for different batches for multiple parameters."""
-    if len(colour_list) != len(parameters_selected):
-        logger.warning(f"List of parameters and List of colours need to have the same length!")
-    for i, parameter in enumerate(parameters_selected):
-        parameter_results = dftotal_statistics[parameter]
-        plt.plot(identifier_inspection, parameter_results[quantity], f"{colour[i]}o-", label=parameter)
-        i += 1
-    plt.xlabel("Batch Identifier")
-    plt.ylabel(title_ylabel)
-    plt.title(f"Statistics plot for {quantity} of different batch for different parameters")
-    plt.tick_params(axis="x", rotation=45)
-    plt.legend()
-    plt.show()
+def create_inspections_time_dataframe(df_inspection_batches_dict: dict, n_parallel: int = 6) -> pd.DataFrame():
+    "Create Dataframe of estimated time of inspections for build and job."
+    tot_time_builds = []
+    tot_time_jobs = []
+    tot_time_sum_builds_and_jobs = []
+
+    for identifier, dataframe in df_total.items():
+        tot_time_builds.append(sum(dataframe["build_duration"]) / 3600 / n_parallel)
+        tot_time_jobs.append(sum(dataframe["job_duration"]) / 3600 / n_parallel)
+        tot_time_sum_builds_and_jobs.append(
+            (sum(dataframe["build_duration"]) / 3600 / n_parallel)
+            + (sum(dataframe["job_duration"]) / 3600 / n_parallel)
+        )
+
+    df_tot_time = pd.DataFrame()
+    df_tot_time["batches"] = identifier_inspection
+    df_tot_time["builds_time"] = tot_time_builds
+    df_tot_time["jobs_time"] = tot_time_jobs
+    df_tot_time["tot_time"] = tot_time_sum_builds_and_jobs
+
+    return df_tot_time
 
 
 # General functions

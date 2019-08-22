@@ -25,8 +25,8 @@ _INSPECTION_REPORT_FEATURES = {
     "software_stack": ["index", "requirements_locked"],
     "base_image": [],
     "pi": ["script", "parameters"],
-    "requests": ["build", "run"],
-    "exit_codes": ["build", "run"],
+    "requests": ["build_requests", "run_requests"],
+    "exit_codes": ["build_exit_code", "run_exit_code"],
 }
 
 _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING = {
@@ -45,35 +45,49 @@ _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING = {
 }
 
 
-def create_report(df_inspection_batch: pd.DataFrame) -> dict:
+def create_report(df_inspection_batch: pd.DataFrame, visualization: bool = False) -> dict:
     """Create report describing the batch of inspection jobs for the different features."""
     report_results = {}
     for feature, sub_features in _INSPECTION_REPORT_FEATURES.items():
         report_results[feature] = {}
-        print("\n=========================================================================")
-        print(feature)
-        print("\n=========================================================================")
+        if visualization:
+            print("\n=========================================================================")
+            print(feature)
+            print("=========================================================================")
         if sub_features:
             for sub_feature in sub_features:
-                print("\n-------------------------------------------------------------------------")
-                print(f"{feature} -> {sub_feature}")
-                print("\n-------------------------------------------------------------------------")
+                if visualization:
+                    print("\n-------------------------------------------------------------------------")
+                    print(f"{feature} -> {sub_feature}")
+                    print("-------------------------------------------------------------------------")
                 sub_feature_result = inspection.query_inspection_dataframe(
                     df_inspection_batch, groupby=_INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[sub_feature], exclude="node"
                 )
-                report_results[feature][sub_feature] = show_categories(sub_feature_result)
+                if visualization:
+                    report_results[feature][sub_feature] = show_categories(sub_feature_result)
         else:
             feature_result = inspection.query_inspection_dataframe(
                 df_inspection_batch, groupby=_INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[feature], exclude="node"
             )
-            report_results[feature] = show_categories(sub_feature_result)
+            if visualization:
+                report_results[feature] = show_categories(feature_result)
 
     return report_results
 
 
-def create_feature_summary(df_inspection_batches_dict: dict, explanation: bool = False) -> dict:
+def create_tot_report_dict(identifier_inspection: List[str], inspection_results_batches_dict: dict) -> dict:
+    """Create dictionary containing all reports for inspection batches selected."""
+    inpection_batches_reports_dict = {}
+
+    for identifier in identifier_inspection:
+        tot_reports[identifier] = create_report(inspection_results_batches_dict[identifier])
+
+    return inpection_batches_reports_dict
+
+
+def create_feature_summary(inpection_batches_reports_dict: dict, explanation: bool = False) -> dict:
     """Create summary of number of combinations per features."""
-    results_features = _aggregate_results_per_feature(df_inspection_batches_dict)
+    results_features = _aggregate_results_per_feature(inpection_batches_reports_dict)
     features_summary = {}
     explanation_summary = {}
     for feature, feature_results in results_features.items():
@@ -150,7 +164,7 @@ def _visualize_summary(summary_results: dict):
     for feature, feature_results in summary.items():
         print("\n===============================================================================")
         print(feature)
-        print("\n===============================================================================")
+        print("===============================================================================")
         if len(feature_results) > 1:
             for sub_feature, sub_feature_results in feature_results.items():
                 print("\n---------------------------------------------------------------------------")
@@ -158,17 +172,16 @@ def _visualize_summary(summary_results: dict):
                 for key, count in sub_feature_results.items():
                     if count > 1:
                         print(f"{key}: {count}")
-                    else:
-                        print("All constant!")
+
         else:
             for key, count in feature_results.items():
                 if count > 1:
-                    print("\n===========================================================================================")
+                    print(
+                        "\n==========================================================================================="
+                    )
                     print(feature)
-                    print("\n===========================================================================================")
+                    print("===========================================================================================")
                     print(f"{key}: {count}")
-                else:
-                    print("All constant!")
 
 
 def _visualize_differences_in_inspection_results(summary_explained: dict):
