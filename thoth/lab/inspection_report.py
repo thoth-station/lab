@@ -18,6 +18,8 @@
 
 import logging
 
+from . import inspection
+
 logger = logging.getLogger("thoth.lab.inspection_report")
 
 _INSPECTION_REPORT_FEATURES = {
@@ -41,48 +43,44 @@ _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING = {
     "build_requests": ["build__requests"],
     "run_requests": ["run__requests"],
     "build_exit_code": ["build__exit_code"],
-    "job_exit_code": ["job__exit_code", "job_log__exit_code"],
+    "run_exit_code": ["job__exit_code", "job_log__exit_code"],
 }
 
 
-def create_report(df_inspection_batch: pd.DataFrame, visualization: bool = False) -> dict:
+def create_report(df_inspection_batch: pd.DataFrame) -> dict:
     """Create report describing the batch of inspection jobs for the different features."""
     report_results = {}
     for feature, sub_features in _INSPECTION_REPORT_FEATURES.items():
         report_results[feature] = {}
-        if visualization:
-            print("\n=========================================================================")
-            print(feature)
-            print("=========================================================================")
+        logger.debug("\n=========================================================================")
+        logger.debug(feature)
+        logger.debug("=========================================================================")
         if sub_features:
             for sub_feature in sub_features:
-                if visualization:
-                    print("\n-------------------------------------------------------------------------")
-                    print(f"{feature} -> {sub_feature}")
-                    print("-------------------------------------------------------------------------")
+                logger.debug("\n-------------------------------------------------------------------------")
+                logger.debug(f"{feature} -> {sub_feature}")
+                logger.debug("-------------------------------------------------------------------------")
                 sub_feature_result = inspection.query_inspection_dataframe(
                     df_inspection_batch, groupby=_INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[sub_feature], exclude="node"
                 )
-                if visualization:
-                    report_results[feature][sub_feature] = show_categories(sub_feature_result)
+                report_results[feature][sub_feature] = inspection.show_categories(sub_feature_result)
         else:
             feature_result = inspection.query_inspection_dataframe(
                 df_inspection_batch, groupby=_INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[feature], exclude="node"
             )
-            if visualization:
-                report_results[feature] = show_categories(feature_result)
+            report_results[feature] = inspection.show_categories(feature_result)
 
     return report_results
 
 
-def create_tot_report_dict(identifier_inspection: List[str], inspection_results_batches_dict: dict) -> dict:
+def create_tot_report_dict(identifier_inspection: List[str], inspection_results_df_dict: dict) -> dict:
     """Create dictionary containing all reports for inspection batches selected."""
-    inpection_batches_reports_dict = {}
+    inspection_batches_reports_dict = {}
 
     for identifier in identifier_inspection:
-        tot_reports[identifier] = create_report(inspection_results_batches_dict[identifier])
+        inspection_batches_reports_dict[identifier] = create_report(inspection_results_df_dict[identifier])
 
-    return inpection_batches_reports_dict
+    return inspection_batches_reports_dict
 
 
 def create_feature_summary(inpection_batches_reports_dict: dict, explanation: bool = False) -> dict:
@@ -161,56 +159,53 @@ def _aggregate_results_per_feature(inspection_batches_reports_dict: dict) -> dic
 
 def _visualize_summary(summary_results: dict):
     """Visualize summary of results for all inspection batches (if there are any differences)."""
-    for feature, feature_results in summary.items():
-        print("\n===============================================================================")
-        print(feature)
-        print("===============================================================================")
+    for feature, feature_results in summary_results.items():
+        logger.debug("\n===============================================================================")
+        logger.debug(feature)
+        logger.debug("===============================================================================")
         if len(feature_results) > 1:
             for sub_feature, sub_feature_results in feature_results.items():
-                print("\n---------------------------------------------------------------------------")
-                print(sub_feature)
+                logger.debug("\n---------------------------------------------------------------------------")
+                logger.debug(sub_feature)
                 for key, count in sub_feature_results.items():
                     if count > 1:
-                        print(f"{key}: {count}")
+                        logger.debug(f"{key}: {count}")
 
         else:
             for key, count in feature_results.items():
                 if count > 1:
-                    print(
-                        "\n==========================================================================================="
-                    )
-                    print(feature)
-                    print("===========================================================================================")
-                    print(f"{key}: {count}")
+                    logger.debug("\n===========================================================================================")
+                    logger.debug(feature)
+                    logger.debug("===========================================================================================")
+                    logger.debug(f"{key}: {count}")
 
 
 def _visualize_differences_in_inspection_results(summary_explained: dict):
     """Function to identify and visualize differences in inspection batches for the different features."""
     for feature, feature_results in summary_explained.items():
-        print("\n=========================================================================")
-        print(feature)
-        print("\n=========================================================================")
+        logger.debug("\n=========================================================================")
+        logger.debug(feature)
+        logger.debug("=========================================================================")
         if summary_explained[feature]:
             for sub_feature, sub_feature_results in feature_results.items():
                 if sub_feature_results:
-                    print("\n-------------------------------------------------")
-                    print(sub_feature)
-                    print("\n-------------------------------------------------")
+                    logger.debug("\n-------------------------------------------------")
+                    logger.debug(sub_feature)
+                    logger.debug("-------------------------------------------------")
                     for key_sf in sub_feature_results.keys():
                         for value in sub_feature_results[key_sf]:
-                            print()
-                            print(f"{key_sf}: {value}")
+                            logger.debug(f"{key_sf}: {value}")
                             for batch, batch_results in tot_reports.items():
                                 for b, r in batch_results[feature][sub_feature].items():
                                     if r[key_sf] == value:
-                                        print("Identifier:", batch)
+                                        logger.debug("Identifier:", batch)
         else:
             if feature_results:
                 for key_f in feature_results.keys():
                     for value in sub_feature_results[key_f]:
-                        print("=========================================================================")
-                        print(f"\n{key_f}: {value}")
+                        logger.debug("=========================================================================")
+                        logger.debug(f"\n{key_f}: {value}")
                         for batch, batch_results in tot_reports.items():
                             for b, r in batch_results[feature].items():
                                 if r[key_f] == value:
-                                    print("Identifier:", batch)
+                                    logger.debug("Identifier:", batch)
