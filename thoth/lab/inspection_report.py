@@ -17,8 +17,12 @@
 """Inspection report generation and visualization."""
 
 import logging
+import re
 
-from . import inspection
+import pandas as pd
+
+from typing import Any, Dict, List, Tuple, Union
+from thoth.lab import inspection
 
 logger = logging.getLogger("thoth.lab.inspection_report")
 
@@ -52,14 +56,14 @@ def create_report(df_inspection_batch: pd.DataFrame) -> dict:
     report_results = {}
     for feature, sub_features in _INSPECTION_REPORT_FEATURES.items():
         report_results[feature] = {}
-        logger.debug("\n=========================================================================")
-        logger.debug(feature)
-        logger.debug("=========================================================================")
+        logger.info("\n=========================================================================")
+        logger.info(feature)
+        logger.info("=========================================================================")
         if sub_features:
             for sub_feature in sub_features:
-                logger.debug("\n-------------------------------------------------------------------------")
-                logger.debug(f"{feature} -> {sub_feature}")
-                logger.debug("-------------------------------------------------------------------------")
+                logger.info("-------------------------------------------------------------------------")
+                logger.info(f"{feature} -> {sub_feature}")
+                logger.info("-------------------------------------------------------------------------")
                 sub_feature_result = inspection.query_inspection_dataframe(
                     df_inspection_batch, groupby=_INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[sub_feature], exclude="node"
                 )
@@ -83,30 +87,33 @@ def create_tot_report_dict(identifier_inspection: List[str], inspection_results_
     return inspection_batches_reports_dict
 
 
-def create_feature_summary(inpection_batches_reports_dict: dict, explanation: bool = False) -> dict:
+def create_feature_summary(inspection_batches_reports_dict: dict, explanation: bool = False) -> dict:
     """Create summary of number of combinations per features."""
-    results_features = _aggregate_results_per_feature(inpection_batches_reports_dict)
+    results_features = _aggregate_results_per_feature(inspection_batches_reports_dict)
     features_summary = {}
-    explanation_summary = {}
+    if explanation:
+        explanation_summary = {}
     for feature, feature_results in results_features.items():
-        explanation_summary[feature] = {}
+        if explanation:
+            explanation_summary[feature] = {}
 
         if not isinstance(feature_results, list):
             features_summary[feature] = {}
 
             for sub_feature, sub_feature_results in feature_results.items():
-                explanation_summary[feature][sub_feature] = {}
+                if explanation:
+                    explanation_summary[feature][sub_feature] = {}
                 keys = [key for key in sub_feature_results[0].keys()]
                 key_counts = {}
 
                 for key in keys:
 
                     key_counts[key] = len(set([k[key] for k in results_features[feature][sub_feature]]))
-
-                    if key_counts[key] != 1:
-                        explanation_summary[feature][sub_feature][key] = set(
-                            [k[key] for k in results_features[feature][sub_feature]]
-                        )
+                    if explanation:
+                        if key_counts[key] != 1:
+                            explanation_summary[feature][sub_feature][key] = set(
+                                [k[key] for k in results_features[feature][sub_feature]]
+                            )
 
                 features_summary[feature][sub_feature] = key_counts
         else:
@@ -115,13 +122,13 @@ def create_feature_summary(inpection_batches_reports_dict: dict, explanation: bo
 
             for key in keys:
                 key_counts[key] = len(set([k[key] for k in results_features[feature]]))
-
-                if key_counts[key] != 1:
-                    explanation_summary[feature][key] = set([k[key] for k in results_features[feature]])
+                if explanation:
+                    if key_counts[key] != 1:
+                        explanation_summary[feature][key] = set([k[key] for k in results_features[feature]])
 
             features_summary[feature] = key_counts
     if explanation:
-        return _visualize_differences_in_inspection_results(explanation_summary)
+        return _visualize_differences_in_inspection_results(explanation_summary, inspection_batches_reports_dict)
 
     return _visualize_summary(features_summary)
 
@@ -160,52 +167,56 @@ def _aggregate_results_per_feature(inspection_batches_reports_dict: dict) -> dic
 def _visualize_summary(summary_results: dict):
     """Visualize summary of results for all inspection batches (if there are any differences)."""
     for feature, feature_results in summary_results.items():
-        logger.debug("\n===============================================================================")
-        logger.debug(feature)
-        logger.debug("===============================================================================")
+        logger.info("===============================================================================")
+        logger.info(feature)
+        logger.info("===============================================================================")
         if len(feature_results) > 1:
             for sub_feature, sub_feature_results in feature_results.items():
-                logger.debug("\n---------------------------------------------------------------------------")
-                logger.debug(sub_feature)
+                logger.info("---------------------------------------------------------------------------")
+                logger.info(sub_feature)
                 for key, count in sub_feature_results.items():
                     if count > 1:
-                        logger.debug(f"{key}: {count}")
+                        logger.info(f"{key}: {count}")
 
         else:
             for key, count in feature_results.items():
                 if count > 1:
-                    logger.debug("\n===========================================================================================")
-                    logger.debug(feature)
-                    logger.debug("===========================================================================================")
-                    logger.debug(f"{key}: {count}")
+                    logger.info(
+                        "==========================================================================================="
+                    )
+                    logger.info(feature)
+                    logger.info(
+                        "==========================================================================================="
+                    )
+                    logger.info(f"{key}: {count}")
 
 
-def _visualize_differences_in_inspection_results(summary_explained: dict):
+def _visualize_differences_in_inspection_results(summary_explained: dict, dict_all_reports: dict):
     """Function to identify and visualize differences in inspection batches for the different features."""
     for feature, feature_results in summary_explained.items():
-        logger.debug("\n=========================================================================")
-        logger.debug(feature)
-        logger.debug("=========================================================================")
+        logger.info("=========================================================================")
+        logger.info(feature)
+        logger.info("=========================================================================")
         if summary_explained[feature]:
             for sub_feature, sub_feature_results in feature_results.items():
                 if sub_feature_results:
-                    logger.debug("\n-------------------------------------------------")
-                    logger.debug(sub_feature)
-                    logger.debug("-------------------------------------------------")
+                    logger.info("-------------------------------------------------")
+                    logger.info(sub_feature)
+                    logger.info("-------------------------------------------------")
                     for key_sf in sub_feature_results.keys():
                         for value in sub_feature_results[key_sf]:
-                            logger.debug(f"{key_sf}: {value}")
-                            for batch, batch_results in tot_reports.items():
+                            logger.info(f"{key_sf}: {value}")
+                            for batch, batch_results in dict_all_reports.items():
                                 for b, r in batch_results[feature][sub_feature].items():
                                     if r[key_sf] == value:
-                                        logger.debug("Identifier:", batch)
+                                        logger.info("Identifier %r:", batch)
         else:
             if feature_results:
                 for key_f in feature_results.keys():
                     for value in sub_feature_results[key_f]:
-                        logger.debug("=========================================================================")
-                        logger.debug(f"\n{key_f}: {value}")
+                        logger.info("=========================================================================")
+                        logger.info(f"{key_f}: {value}")
                         for batch, batch_results in tot_reports.items():
                             for b, r in batch_results[feature].items():
                                 if r[key_f] == value:
-                                    logger.debug("Identifier:", batch)
+                                    logger.info("Identifier %r:", batch)
