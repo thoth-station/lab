@@ -27,13 +27,17 @@ import textwrap
 import typing
 
 import cufflinks as cf
+import seaborn as sns
+import matplotlib.pyplot as plt
 import plotly
 import plotly.offline as py
 
 from pandas_profiling import ProfileReport as profile
 from pandas.io.json import json_normalize
+from pandas.plotting import lag_plot
 
 from prettyprinter import pformat
+from IPython.display import Markdown, display
 
 from typing import Any, Dict, List, Tuple, Union
 from typing import Callable, Iterable
@@ -467,3 +471,422 @@ def show_categories(inspection_df: pd.DataFrame):
 
         frame = inspection_df.loc[idx]
         print("Number of rows (jobs) is:", frame.shape[0])
+
+
+def columns_to_analyze(df: pd.DataFrame, low=0, high=len(df_original), 
+                        display_clusters = False, cluster_by_hue = False)-> pd.DataFrame:
+    """Print all columns within dataframe and count of unique column values if any fall within
+    limit specified. If limit is not specified, the lower limit is 0 and the upper limit is
+    size of data set so that the default function prints all columns and corresponding count of 
+    unique values within each column. In addition to printing, function returns dataframe 
+    with results that fall within the limits.
+    
+    :param df: data frame to analyze as returned by `process_inspection_results'
+    :param low: the lower limit (0 if not specified) of distinct value counts
+    :param high: the upper limit (size of data set if not specified) of distinct value counts
+    """
+    
+    lst_columns_to_analyze = []
+    
+    #Groups every column by unique values
+    printmd("#### Columns to analyze, Unique Value Count")
+    for i in df:
+        try:
+            value_count = len(df.groupby(i).count())
+            
+            if ((value_count >= low) and (value_count <= high)):
+                print(i, value_count)
+                lst_columns_to_analyze.append(i)
+        except TypeError:
+            #Groups every column by unique values if values are in list or dict formats
+            try:
+                value_count = len(pd.Series(df[i].values).apply(tuple).unique())
+                if ((value_count >= low) and (value_count <= high)):
+                    print(i, value_count)
+                    lst_columns_to_analyze.append(i)
+            except TypeError:
+                l = (list(df[i].values))
+                value_count = len([i for n, i in enumerate(l) if i not in l[n + 1:]])
+                if ((value_count >= low) and (value_count <= high)):
+                    print(i, value_count)
+                    lst_columns_to_analyze.append(i)
+                pass
+            
+    #Filters data frame to columns with distinct value counts within the limit 
+    df_analyze = df[lst_columns_to_analyze] 
+    
+    
+    if display_clusters is True: 
+        printmd("#### Inspection result count organized by parameter + parameter values")
+        try:
+            for i in display_jobs_by_subcategories(df_analyze):
+                display(i)
+        except TypeError:
+            pass
+    
+
+    if cluster_by_hue is True:
+        if ((low > 0) and (high < 100)):
+            printmd("#### Distribution of parameters to analyze organized by hues")
+            plot_subcategories_by_hues(df_analyze, df, "status__job__duration")
+        else:
+            printmd("##### Parameter variance too large to plot by hue/color")
+    return df_analyze
+
+
+def display_jobs_by_subcategories(df: pd.DataFrame):
+    """Create dataframe with job counts for each subcategory for every column in the data frame.
+    
+    :param df: dataframe with columns of unique value counts greater than 1 as returned by 
+    columns_to_analyze function with all constants filtered out.
+    """
+    try:
+        lst = []
+        #Introduce index column for job counts
+        df = df.reset_index()
+        for i in df.columns:
+            created_values = inspection.query_inspection_dataframe(df, groupby=i)
+            if not i == 'index':
+                df_inspection_id= created_values.groupby([i]).count()
+                df_inspection_id = df_inspection_id.filter(['index', i])
+                lst.append(df_inspection_id)
+        return lst
+    except ValueError:
+        #Error given if column values in dataframe are constant
+        print("Some or all columns passed in are not distinct in values")
+        
+        
+def duration_plots(df: pd.DataFrame):
+    """Creates primary scatter plot visuals of job duration, build duration, elapsed time as well as 
+    lag plots of job duration and lead time.
+    
+    :param df: data frame with duration information as returned by process_inspection_results with all 
+    duration columns converted into seconds.
+    """
+    fig = plt.figure(figsize=(10,20))
+    ax1 = fig.add_subplot(321)
+    ax2 = fig.add_subplot(322)
+    ax3 = fig.add_subplot(323)
+    ax4 = fig.add_subplot(324)
+    ax5 = fig.add_subplot(325)
+    ax6 = fig.add_subplot(326)
+
+    df = df.reset_index()
+    
+    #Create value lead_time as: created to status__job__started_at 
+    df["lead_time"] = df["status__job__started_at"].subtract(df["created"]).dt.total_seconds()
+    df = df.sort_values(by=["created"])
+
+    #Plot job__duration from inspection results
+    s_plot = df.plot.scatter(x='status__job__duration', y = 'index', c='DarkBlue', 
+                             title = 'Job Duration', ax = ax1)
+    s_plot.set_xlabel("status__job__duration [ms]")
+    
+    #Plot build__duration from inspection results
+    s_plot = df.plot.scatter(x='status__build__duration',y = 'index', c='DarkBlue', 
+                             title = 'Build Duration', ax = ax2)
+    s_plot.set_xlabel("status__job__duration [ms]")
+    
+    #Plot elapsed time from inspection results
+    df["job_log__stdout__@result__elapsed"] = df["job_log__stdout__@result__elapsed"]/1000
+    s_plot = df.plot.scatter(x='job_log__stdout__@result__elapsed',y = 'index', c='DarkBlue', 
+                             title = 'Elapsed Duration', ax = ax3)
+    s_plot.set_xlabel("elapsed [ms]")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+    #Plot lag plot of job duration sorted by the start of job
+    df = df.sort_values(by=["status__job__started_at"])
+    lag_plot(df["status__job__duration"], ax = ax4)
+    ax4.set_title("Job Duration Autocorrelation (Sort by job_started)")
+    
+    #Plot lag plot of lead time sorted by job created
+    df = df.sort_values(by=["created"])
+    lag_plot(df["lead_time"], ax = ax5)
+    ax5.set_title("lead_duration Autocorrelation (Sort by created)")
+
+    #Plot lag plot of lead time sorted by job started
+    df = df.sort_values(by=["status__job__started_at"])
+    lag_plot(df["lead_time"], ax = ax6)
+    ax6.set_title("lead_duration Autocorrelation (Sort by job_started)")
+
+    
+def plot_subcategories_by_hues(df_cat: pd.DataFrame, df: pd.DataFrame, column):
+    """Create scatter plots with parameter categories separated by hues.
+    
+    :param df_cat: filtered dataframe with columns to analyze as returned by columns_to_analyze.
+    :param df: data frame with duration information as returned by process_inspection_results with all 
+    duration columns converted into seconds.
+    :param colum: job duration/build duration columns from 'df'
+    """
+    df = df.reset_index()
+    for i in df_cat:
+        g = sns.FacetGrid(df, hue=i, margin_titles=True, height=5, aspect=1)
+        g.map(sns.regplot, column, "index", fit_reg=False, x_jitter=.1,  scatter_kws=dict(alpha=0.5))      
+        g.add_legend()
+       
+    
+def concatenated_df(lst_of_df, column):
+    """Reorganizes dataframe to show the distribution of jobs in a category across different
+    sets/subsets of data.
+    
+    :param lst_of_df: inspection result dataframes which can be different datasets or subset of datasets
+    :param column: category for grouping to see the distribution of results
+    """
+    lst_processed = []
+    for i in lst_of_df:
+        i = i.reset_index()
+        df_grouping_category = i.groupby([column]).count()
+        col_one = df_grouping_category["index"]
+        df_col_one = pd.DataFrame(col_one)
+        df_col_one = df_col_one.rename(index=str, columns={"index": "Total jobs:"+"{}".format(len(i))})
+        lst_processed.append(df_col_one)
+    
+    df_final = pd.concat([i for i in lst_processed], axis = 1)
+    return df_final
+
+
+def summary_trace_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst = []):
+    """Create trace plot scaled by percentage of compositions of each parameter analyzed.
+    
+    :param df: data frame with duration information as returned by process_inspection_results with all 
+    duration columns converted into seconds.
+    :param df_categories: filtered dataframe with columns to analyze as returned by columns_to_analyze.
+    :param lst: list of set or subset dataframes of data with the last value in the list being 
+    the entire data set.
+    """
+    fig = plt.figure(figsize=(15,len(df_categories.columns)*4))
+    lst_df = []
+    for i in df_categories.columns:
+        lst_df.append((concatenated_df(lst, i)))
+    lst_to_analyze = df_categories.columns
+    count = 0
+    for i in range(len(df_categories.columns)):
+        ax = fig.add_subplot(len(df_categories.columns), 1, i+1)
+        lst_df[count].apply(lambda x: x/x.sum()).transpose().plot(kind='bar', stacked=True, ax=ax, sharex = ax)
+        ax.legend(title=lst_to_analyze[count], loc=9, bbox_to_anchor=(1.3,0.7), fontsize='small', fancybox=True)
+        count+=1
+        
+        
+def summary_bar_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst_of_clusters):
+    """Create trace stacked plot scaled by total jobs of each parameter within clusters if any as compared 
+    to a separate trace of all jobs
+    
+    :param df: data frame with duration information as returned by process_inspection_results with all 
+    duration columns converted into seconds.
+    :param df_categories:  filtered dataframe with columns to analyze as returned by columns_to_analyze.
+    :param lst_of_clusters: list of set or subset dataframes of data with the last value in the list being 
+    the entire data set.
+    """
+    fig = plt.figure(figsize=(15,len(df_categories.columns)*7))
+    lst_df = [] #list of dataframes, dataframe for each cluster
+        
+    for i in df_categories.columns:
+        lst_df.append((concatenated_df(lst_of_clusters, i)))
+    
+    lst_to_analyze = df_categories.columns
+    count = 0
+
+    for i in (lst_df):
+        ax = fig.add_subplot(len(df_categories.columns), 1, count+1)
+        ax.set_title(lst_to_analyze[count])
+        colors = ["#addd8e","#fdd0a2", "#a6bddb","#7fcdbb"]
+        
+        if (len(lst_of_clusters)>1):
+            lst_cluster = []
+            for j in range(len(lst_of_clusters)-1):
+                lst_cluster.append('Total jobs:{}'.format(len(lst_of_clusters[j])))
+            g = lst_df[count].loc[:,lst_cluster].plot(align = 'edge', kind = "barh", stacked=True, color=colors, width = .6, ax = ax)
+
+        g = lst_df[count].loc[:,['Total jobs:{}'.format(len(lst_of_clusters[-1]))]].plot(align = 'edge', kind = "barh", stacked=False, color="#7fcdbb", width = .3, ax = ax)
+        g.legend(loc=9, bbox_to_anchor=(1.3,0.7), fontsize='small', fancybox=True)
+        x_offset = 1
+        y_offset = -.2
+        for p in g.patches:
+            b = p.get_bbox()
+            val = "{0:g}".format(b.x1 - b.x0)
+            if (val != '0'):
+                g.annotate(val, ((b.x1) + x_offset, b.y1 + y_offset))
+        count +=1
+
+        
+def plot_distribution_of_jobs_combined_categories(df: pd.DataFrame, df_duration: pd.DataFrame, df_analyze: pd.DataFrame):
+    """Create trace stacked plot scaled by total jobs of each parameter within clusters if any as compared 
+    to a separate trace of all jobs
+    
+    :param df: data frame with duration information as returned by process_inspection_results with all 
+    duration columns converted into seconds.
+    :param df_categories:  filtered dataframe with columns to analyze as returned by columns_to_analyze.
+    :param lst_of_clusters: list of set or subset dataframes of data with the last value in the list being 
+    the entire data set.
+    """
+    list_df_combinations = []
+    for i in range(len(df)):
+        ll = []
+        for j in range(len(df.columns)-1):
+            ll.append((df_analyze[df.columns[j]] == df.iloc[i,j]))
+        df_new = df_duration[np.logical_and.reduce(ll)]
+    
+        list_df_combinations.append(df_new)
+
+    fig = plt.figure(figsize=(5,4*len(df)))
+    fig.subplots_adjust(hspace=0.7, wspace=0.7)
+    for i in range(len(df)):
+        plt.subplot(len(df), 1,i+1)
+        g = sns.distplot(list_df_combinations[i]["status__job__duration"], kde=True)
+        g.set_title(str(df.loc[i]), fontsize = 6)
+
+        
+#Function takes in a column and prints out the feature class
+def map_column_to_feature_class(column_name):
+    """Helper function that maps a column in the original dataframe to a feature class as mentioned in the testing
+    document.
+    
+    :param df: data frame with duration information as returned by process_inspection_results with all 
+    duration columns converted into seconds and no columns dropped (drop=False)
+    """
+    
+    #The keys are keywords to help associate each column with the corresponding feature class.
+    software_keys = ["specification__files", "specification__packages", "specification__python__requirements"]
+    script_keys = ["job_log__script", "job_log__stderr", "job_log__stdout", "specification__script"]
+    hardware_keys = ["hwinfo__cpu", "platform__architecture", "platform__machine", "platform__platform",
+                    "platform__processor", "platform__release", "platform__version"]
+    
+
+    if (any(x in column_name for x in hardware_keys)):
+        return ("Hardware (ncpus + Platform + Processor)")
+    elif(any(x in column_name for x in software_keys)):
+        return ("Software stack (files, python packages, python requirements)")
+    elif("specification__base" in column_name):
+        return ("Base image")
+    elif(any(x in column_name for x in script_keys)):
+        return ("Script (script + sha256 + parameters)")
+    elif("build__requests" in column_name):
+        return ("Build request (hardware + memory)")
+    elif("run__requests" in column_name):
+        return ("Run request (hardware + memory)")
+    elif("build__exit_code" in column_name):
+        return ("Failure build (exit_code)")
+    elif("job__exit_code" in column_name):
+        return ("Failure run/job (exit_code)")
+    elif("job_log__exit_code" in column_name):
+        return ("Job Log (exit_code)")
+    else:
+        return ("Inspection Result Info")
+
+    
+def process_empty_or_mutable_parameters(df: pd.DataFrame):
+    """Prints all columns with values of type dictionary/list (these values will not work with further processing
+    using the groupby function). Prints the unique value count of all columns that are unhashable (all such 
+    columns are constant). Drops these columns and returns a new dataframe.
+    
+    :param df: data frame with duration information as returned by process_inspection_results with all 
+    duration columns converted into seconds and no columns dropped (drop=False).
+    """
+    
+    #This is a list to populate with columns with no data or columns with unhashable data.
+    list_of_unhashable_none_values = [] 
+    for i in df:
+        try:
+            value_count = len(df.groupby(i).count())
+            
+            #Columns with no data
+            if (value_count == 0):
+                print(i, value_count)
+                list_of_unhashable_none_values.append(i)
+        except TypeError:
+            #Groups every column by unique values if values are in list or dict formats
+            try:
+                #If values are type list checks uniqueness
+                value_count = len(pd.Series(df[i].values).apply(tuple).unique())
+                list_of_unhashable_none_values.append(i)
+                print(i, value_count)
+            except TypeError:
+                #If values are type dict checks uniqueness
+                l = (list(df[i].values))
+                value_count = len([i for n, i in enumerate(l) if i not in l[n + 1:]])
+                list_of_unhashable_none_values.append(i)
+                print(i, value_count)
+    return df.drop(list_of_unhashable_none_values, axis = 1)
+
+
+#Function takes in dataframe
+def unique_value_count_by_feature_class(df: pd.DataFrame):
+    """Prints unique count values per feature/class. Prints results per feature/class that are subdivided in 
+    subclasses that map to it.
+    
+    :param df: processed dataframe as returned by the process_empty_or_mutable_parameters.
+    """
+    dict_to_feature_class = {}
+    list_of_features = []
+    
+    #Iterate through dataframe and create a dictionary of dataframe column: feature class key value pairs.
+    for i in df:
+        dict_to_feature_class[i] = map_column_to_feature_class(i)
+        list_of_features.append(map_column_to_feature_class(i))
+    
+    #Get list of distinct feature class labels (this is generalized to accomodate changes made to the label)
+    list_of_features = set(list_of_features)
+    
+    #Iterate through every feature class
+    for j in list_of_features:
+        #count = 0
+        #Get a list of parameters that fall within the class
+        list_of_parameters_per_feature = []
+        for k in dict_to_feature_class:
+            if (j == dict_to_feature_class[k]):
+                list_of_parameters_per_feature.append(k)
+                #count+=1
+        
+        #Groupby to get unique value count for feature class
+        try:
+            group = df.groupby(list_of_parameters_per_feature).size()
+            printmd("#### {} {}".format(j, len(group)))
+                    
+            #Groupby to get unique value count for each dataframe column
+            for l in list_of_parameters_per_feature:
+                print(l, len(df.groupby(l).size()))
+                
+        except (TypeError, ValueError) as e:
+            print("Parameter does not have any values. Filter these out first")
+
+            
+def dataframe_statistics(df: pd.DataFrame, plot_title):
+    """Given a dataframe this function outputs a data frame with relevant statistics on job duration, build duration
+    and time elapsed.
+    
+    :param df: data frame to analyze as returned by `process_inspection_results' with duration values in ms
+    :param plot_title: title of fit plot
+
+    """
+    #Measure of skew and kurtosis for job and build duration    printmd("## Duration Statistics")
+    printmd("#### Skew and kurtosis statistics")
+    print("Job Duration Skew:", df["status__job__duration"].skew(axis = 0, skipna = True))
+    print("Build Duration Skew:", df["status__build__duration"].skew(axis = 0, skipna = True))
+    print("Job Duration Kurtosis", (df["status__job__duration"].kurt(axis = 0, skipna = True)))
+    print("Build Duration Kurtosis", (df["status__build__duration"].kurt(axis = 0, skipna = True)))
+    
+    #Statistics for job duration, build duration, and elapsed time 
+    printmd("#### Duration statistics")
+    df_stats = pd.DataFrame((df["status__job__duration"].describe()))
+    df_stats["status__build__duration"] = df["status__build__duration"].describe()
+    df_stats["job_log__stdout__@result__elapsed"] = (df["job_log__stdout__@result__elapsed"]/1000).describe()
+    display(df_stats)
+    
+    #Plotting of job duration and build duration with fit
+    g= sns.distplot(df["status__job__duration"], kde=True);
+    g.set_title("Job Duration: {}".format(plot_title))
+    printmd("#### Job and build distribution plots, scatter plots, autocorrelation plots")
+    plt.figure()
+    g2 = sns.distplot(df["status__build__duration"], kde=True);
+    g2.set_title("Build Duration: {}".format(plot_title))
+    
+    plt.figure()
+    
+    duration_plots(df_duration)
+
+    
+def printmd(string):
+    """Alternate print function implementing markdown formatting
+    
+    :param string: string to print.
+    """
+    display(Markdown(string))
