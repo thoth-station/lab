@@ -50,15 +50,15 @@ from thoth.lab.utils import group_index
 
 logger = logging.getLogger("thoth.lab.inspection")
 
+# cufflinks should be in offline mode
+cf.go_offline()
+
 _INSPECTION_MAPPING_PARAMETERS = {
     "job_duration": "job_duration",
     "build_duration": "build_duration",
     "elapsed": "job_log__stdout__@result__elapsed",
     "rate": "job_log__stdout__@result__rate",
 }
-
-# cufflinks should be in offline mode
-cf.go_offline()
 
 
 def extract_structure_json(input_json: dict, upper_key: str, depth: int, json_structure):
@@ -109,7 +109,7 @@ def extract_keys_from_dataframe(df: pd.DataFrame, key: str):
     return ndf
 
 
-def retrieve_inspection_ids_list() -> List:
+def retrieve_inspection_ids() -> List:
     """Retrieve all inspection ids."""
     inspection_store = InspectionResultsStore()
     inspection_store.connect()
@@ -125,7 +125,7 @@ def filter_inspection_ids(inspection_identifier: List[str]) -> dict:
 
     :param inspection_identifier: list of identifier/s to filter inspection ids
     """
-    inspection_ids = retrieve_inspection_ids_list()
+    inspection_ids = retrieve_inspection_ids()
 
     filtered_inspection_ids = {}
 
@@ -572,10 +572,10 @@ def show_categories(inspection_df: pd.DataFrame):
     return results_categories
 
 
-def create_inspection_df_dict(inspection_results_dict: dict) -> dict:
+def create_inspection_dataframes(inspection_results_dict: dict) -> dict:
     """Create dictionary with data frame as returned by `process_inspection_results' for each inspection identifier.
 
-    :param inspection_results_dict: dictionary containing inspection results retrieved from Ceph per inspection identifier.
+    :param inspection_results_dict: dictionary containing inspection results per inspection identifier.
     """
     inspection_df_dict = {}
 
@@ -621,13 +621,13 @@ def create_inspection_analysis_plots(inspection_df: pd.DataFrame):
     py.iplot(fig)
 
 
-def create_inspection_parameters_dataframe_dict(parameters: list, inspection_df_dict: dict) -> Dict[str, pd.DataFrame]:
-    """The function creates pd.DataFrame of selected parameters from inspections results to be used for statistics and error analysis.
+def create_inspection_parameters_dataframes(parameters: List[str], inspection_df_dict: dict) -> Dict[str, pd.DataFrame]:
+    """Create pd.DataFrame of selected parameters from inspections results to be used for statistics and error analysis.
 
     It also outputs batches and parameters map that is necessary for plots.
 
     :param parameters: inspection parameters used in the analysis
-    :param inspection_df_dict: dictionary with data frame as returned by `process_inspection_results' for each inspection identifier
+    :param inspection_df_dict: dictionary with data frame as returned by `process_inspection_results' per identifier.
     """
     inspection_parameters_df_dict = {}
 
@@ -644,10 +644,7 @@ def create_inspection_parameters_dataframe_dict(parameters: list, inspection_df_
 
 
 def evaluate_statistics(inspection_df: pd.DataFrame, inspection_parameter: str) -> Dict:
-    """Evaluate statistical quantities of a specific parameter of inspection results.
-
-    Statistical quantities evaluated: coefficient of variation (CV), standard error, Standard Deviation, Median, Quantile (0.25, 0.75), IQR, Max and Min 
-    """
+    """Evaluate statistical quantities of a specific parameter of inspection results."""
     cv = inspection_df[inspection_parameter].std() / inspection_df[inspection_parameter].mean() * 100
     std_error = inspection_df[inspection_parameter].std() / np.sqrt(inspection_df[inspection_parameter].shape[0])
     std = inspection_df[inspection_parameter].std()
@@ -672,11 +669,11 @@ def evaluate_statistics(inspection_df: pd.DataFrame, inspection_parameter: str) 
     }
 
 
-def evaluate_inspection_statistics_dict(parameters: list, inspection_df_dict: dict) -> dict:
+def evaluate_inspection_statistics(parameters: list, inspection_df_dict: dict) -> dict:
     """Aggregate statistical quantities per inspection parameter for inspection batches.
 
     :param parameters: inspection parameters used in the analysis
-    :param inspection_df_dict: dictionary with data frame as returned by `process_inspection_results' for each inspection identifier
+    :param inspection_df_dict: dictionary with data frame as returned by `process_inspection_results' per identifier
     """
     inspection_statistics_dict = {}
 
@@ -748,9 +745,7 @@ def plot_interpolated_statistics_of_inspection_parameters(
     plt.show()
 
 
-def create_inspection_time_dataframe(
-    df_inspection_batches_dict: dict, n_parallel: int = 6
-) -> pd.DataFrame():
+def create_inspection_time_dataframe(df_inspection_batches_dict: dict, n_parallel: int = 6) -> pd.DataFrame():
     """Create pd.Dataframe of time of inspections for build and job."""
     tot_time_builds = []
     tot_time_jobs = []
@@ -800,18 +795,44 @@ def create_scatter_and_correlation(
     return figure
 
 
-def create_box_plot_multiple_columns(
-    data: pd.DataFrame, title_box: str = "Box plot", x_label: str = "", y_label: str = "", static: str = True
+def create_plot_multiple_batches(
+    data: pd.DataFrame,
+    plot_type: str = "box" or "hist",
+    plot_title: str = " ",
+    x_label: str = "",
+    y_label: str = "",
+    static: str = True
 ):
-    """Create duration Box plot (static as default)."""
+    """Create (Histogram or Box) plot using several columns of the dataframe(static as default)."""
     if not static:
-        fig = data.iplot(kind="box", title=title_box, yTitle=y_label, asFigure=True)
 
-        return py.plot(fig)
+        if plot_type == "box":
+            fig = data.iplot(kind="box", theme="white",
+                             title=plot_title,
+                             xTitle=x_label,
+                             yTitle=y_label)
 
-    ax = data.plot(kind="box", title=title_box)
-    ax.set_ylabel(x_label)
-    ax.set_ylabel(y_label)
+        if plot_type == "hist":
+            fig = data.iplot(kind="histogram", bins=15, theme="white",
+                             title=plot_title,
+                             xTitle=x_label,
+                             yTitle=y_label)
+
+        return fig
+
+    if plot_type == "box":
+        fig = data.plot(kind="box", title=plot_title)
+        fig.set_ylabel(x_label)
+        fig.set_ylabel(y_label)
+        fig.tick_params(axis="x", rotation=45)
+
+    if plot_type == "hist":
+        fig = data.plot(kind="hist", title=plot_title)
+        fig.set_ylabel(x_label)
+        fig.set_ylabel(y_label)
+        fig.tick_params(axis="x", rotation=45)
+
+    return fig
 
 
 def create_plot_from_df(

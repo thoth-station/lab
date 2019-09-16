@@ -53,7 +53,7 @@ _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING = {
 
 def create_inspection_report(inspection_df: pd.DataFrame) -> dict:
     """Create report describing the batch of inspection jobs for the different features.
-    
+
     :param inspection_df: data frame to analyze as returned by `process_inspection_results`
     """
     inspection_report = {}
@@ -80,9 +80,9 @@ def create_inspection_report(inspection_df: pd.DataFrame) -> dict:
     return inspection_report
 
 
-def create_inspection_report_dict(inspection_df_dict: dict) -> dict:
+def create_inspection_reports(inspection_df_dict: dict) -> dict:
     """Create dictionary containing all reports for inspection batches selected.
-    
+
     :param inspection_df_dict: dictionary with inspection_df per identifier as returned by process_inspection_results
     """
     identifier_list = list(inspection_df_dict.keys())
@@ -184,7 +184,7 @@ def _aggregate_results_per_feature(inspection_report_dict: dict) -> dict:
 
 def _visualize_summary(reports_summary: dict):
     """Visualize summary of results for all inspection batches (if there are any differences).
-    
+
     :param reports_summary: summary of the reports analyzed per inspection identifier
     """
     for feature, feature_results in reports_summary.items():
@@ -215,7 +215,7 @@ def _visualize_summary(reports_summary: dict):
 
 def _visualize_differences_in_inspection_results(detailed_reports_summary: dict, inspection_report_dict: dict):
     """Function to identify and visualize differences in inspection batches for the different features.
-    
+
     :param detailed_reports_summary: detailed summary of the reports analyzed per inspection identifier
     :param inspection_report_dict: dictionary of inspection report as returned by create_inspection_report_dict
     """
