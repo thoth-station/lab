@@ -109,35 +109,14 @@ def extract_keys_from_dataframe(df: pd.DataFrame, key: str):
     return ndf
 
 
-def retrieve_inspection_ids() -> List:
-    """Retrieve all inspection ids."""
-    inspection_store = InspectionResultsStore()
-    inspection_store.connect()
-
-    logger.info(f"Retrieving all inspection ids")
-    inspection_jobs_ids = list(inspection_store.get_document_listing())
-
-    return inspection_jobs_ids
-
-
-def filter_inspection_ids(inspection_identifier: List[str]) -> dict:
+def filter_inspection_ids(inspection_identifiers: List[str]) -> dict:
     """Filter inspection ids list according to the inspection identifier selected.
 
-    :param inspection_identifier: list of identifier/s to filter inspection ids
+    :param inspection_identifiers: list of identifier/s to filter inspection ids
     """
-    inspection_ids = retrieve_inspection_ids()
-
-    filtered_inspection_ids = {}
-
-    for identifier in inspection_identifier:
-        filtered_inspection_ids[identifier] = []
-
-    for ids in inspection_ids:
-        inspection_filter = "-".join(ids.split("-")[1:(len(ids.split("-")) - 1)])
-
-        if inspection_filter:
-            if inspection_filter in inspection_identifier:
-                filtered_inspection_ids[inspection_filter].append(ids)
+    inspection_store = InspectionResultsStore()
+    inspection_store.connect()
+    filtered_inspection_ids = inspection_store.filter_document_ids(inspection_identifiers=inspection_identifiers)
 
     inspections_selected = sum([len(batch_n) for batch_n in filtered_inspection_ids.values()])
     inspection_batches = [(batch_name, len(batch_count)) for batch_name, batch_count in filtered_inspection_ids.items()]
@@ -721,7 +700,7 @@ def plot_interpolated_statistics_of_inspection_parameters(
         if len(inspection_parameters) != len(colour_list):
             logger.warning(f"List of inspection parameters and List of colours shall have the same length!")
         for i, parameter in enumerate(inspection_parameters):
-            parameter_results = dftotal_statistics[parameter]
+            parameter_results = statistical_results_dict[parameter]
             plt.plot(
                 identifier_inspection_list,
                 parameter_results[statistical_quantities[0]],
@@ -859,6 +838,6 @@ def create_plot_from_df(
 
         return fig
 
-    px = data[columns].plot(title=title_plot)
-    x_label = px.set_xlabel(x_label)
-    y_label = px.set_ylabel(y_label)
+    px = data[columns].plot(x=columns[0], title=title_plot)
+    px.set_xlabel(x_label)
+    px.set_ylabel(y_label)
