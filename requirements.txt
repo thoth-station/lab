@@ -2,16 +2,22 @@ ipython
 ipykernel
 requests
 
-gremlinpython
 networkx
 
 pandas
+pandas-profiling
+
+prettyprinter
 
 # visualizations
-# plotly
-# cufflinks
-# matplotlib
+plotly==3.6.1
+cufflinks
+matplotlib
 
 # nbextensions
 jupyter-require
 jupyter_contrib_nbextensions  # needed by pipenv shell
+
+# dev-packages
+coala-bears = "*"
+autopep8 = "*"

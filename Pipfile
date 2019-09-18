@@ -8,7 +8,6 @@ ipython = "*"
 ipykernel = "*"
 requests = "*"
 
-gremlinpython = "*"
 networkx = "*"
 
 pandas = "*"
@@ -17,7 +16,7 @@ pandas-profiling = "*"
 prettyprinter = "*"
 
 # visualizations
-plotly = "*"
+plotly = "==3.6.1"
 cufflinks = "*"
 matplotlib = "*"
 
@@ -28,3 +27,6 @@ jupyter_contrib_nbextensions = "*"  # needed by pipenv shell
 [dev-packages]
 coala-bears = "*"
 autopep8 = "*"
+
+[requires]
+python_version = "3.6"

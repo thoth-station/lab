@@ -25,14 +25,13 @@ import pandas as pd
 
 from collections import OrderedDict
 
-from gremlin_python.structure.graph import Graph
-from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
-
 import plotly.graph_objs as go
 from plotly.offline import init_notebook_mode, iplot
 
 
 class DependencyGraph(nx.OrderedDiGraph):
+    """Construct a dependency graph by extending nx.OrderedDiGraph."""
+
     node_dict_factory = OrderedDict
     adjlist_dict_factory = OrderedDict
 
@@ -46,9 +45,10 @@ class DependencyGraph(nx.OrderedDiGraph):
         root = None
         for node, d in tree.in_degree():
             root = node
-            break;
+            break
 
         return root
+
 
 get_root = DependencyGraph.get_root
 get_root.__doc__ = DependencyGraph.get_root.__doc__
@@ -107,14 +107,3 @@ class GraphQueryResult(object):
             return list(map(lambda x: _serialize(x), self.result))
 
         return _serialize(self.result)
-
-
-def get_graph_traversal(location: str, port: int = 80):
-    """Get graph traversal handle for your experiments.
-
-    :param location: A location to the graph database instance. Recommended to be
-                     used with :func:`thoth.lab.utils.obtain_location`
-    :param port: a port number on which the gremlin listens on
-    :return: a graph traversal object "g"
-    """
-    return Graph().traversal().withRemote(DriverRemoteConnection(f'ws://{location}:{port}/gremlin', 'g'))
