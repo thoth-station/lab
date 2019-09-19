@@ -45,6 +45,8 @@ from plotly import tools
 import matplotlib
 import matplotlib.pyplot as plt
 
+import seaborn as sns
+
 from thoth.storages import InspectionResultsStore
 from thoth.lab.utils import group_index
 
@@ -52,6 +54,8 @@ logger = logging.getLogger("thoth.lab.inspection")
 
 # cufflinks should be in offline mode
 cf.go_offline()
+
+sns.set(style="whitegrid")
 
 _INSPECTION_MAPPING_PARAMETERS = {
     "job_duration": "job_duration",
@@ -689,6 +693,8 @@ def plot_interpolated_statistics_of_inspection_parameters(
     inspection_parameters: List[str],
     colour_list: List[str],
     statistical_quantities: List[str],
+    title_plot: str = "",
+    title_xlabel: str = " ",
     title_ylabel: str = " ",
     save_result: bool = False
 ):
@@ -700,9 +706,9 @@ def plot_interpolated_statistics_of_inspection_parameters(
         for i, quantity in enumerate(statistical_quantities):
             plt.plot(identifier_inspection_list, parameter_results[quantity], f"{colour_list[i]}o-", label=quantity)
             i += 1
-        plt.title(f"Statistics plot for {inspection_parameters[0]} of different batch")
+        plt.title(title_plot)
         if save_result:
-            title = f"Statistics plot for {inspection_parameters[0]} of different batch"
+            title = title_plot
 
     elif len(inspection_parameters) > 1 and len(statistical_quantities) == 1:
         if len(inspection_parameters) != len(colour_list):
@@ -713,12 +719,12 @@ def plot_interpolated_statistics_of_inspection_parameters(
                 identifier_inspection_list,
                 parameter_results[statistical_quantities[0]],
                 f"{colour_list[i]}o-",
-                label=parameter
+                label=parameter,
             )
             i += 1
-        plt.title(f"Statistics plot for {statistical_quantities[0]} of different batch for different parameters")
+        plt.title(title_plot)
         if save_result:
-            title = f"Statistics plot for {statistical_quantities[0]} of different batch for different parameters"
+            title = title_plot
 
     elif len(inspection_parameters) == 1 and len(statistical_quantities) == 1:
         if len(colour_list) != len(statistical_quantities):
@@ -727,9 +733,9 @@ def plot_interpolated_statistics_of_inspection_parameters(
         for i, quantity in enumerate(statistical_quantities):
             plt.plot(identifier_inspection_list, parameter_results[quantity], f"{colour_list[i]}o-", label=quantity)
             i += 1
-        plt.title(f"Statistics plot of {quantity} for {inspection_parameters[0]} of different batch")
+        plt.title(title_plot)
         if save_result:
-            title = f"Statistics plot of {quantity} for {inspection_parameters[0]} of different batch"
+            title = title_plot
     else:
         logger.warning(
             """Combinations allowed:
@@ -738,7 +744,7 @@ def plot_interpolated_statistics_of_inspection_parameters(
             """
         )
 
-    plt.xlabel("Batch Identifier")
+    plt.xlabel(title_xlabel)
     plt.ylabel(title_ylabel)
     plt.tick_params(axis="x", rotation=45)
     plt.legend()
@@ -861,13 +867,13 @@ def create_plot_multiple_batches(
 
     if plot_type == "box":
         px = data.plot(kind="box", title=plot_title)
-        px.set_ylabel(x_label)
+        px.set_xlabel(x_label)
         px.set_ylabel(y_label)
         px.tick_params(axis="x", rotation=45)
 
     if plot_type == "hist":
         px = data.plot(kind="hist", title=plot_title)
-        px.set_ylabel(x_label)
+        px.set_xlabel(x_label)
         px.set_ylabel(y_label)
         px.tick_params(axis="x", rotation=45)
 
@@ -912,3 +918,21 @@ def create_plot_from_df(
     if save_result:
         fig = px.get_figure()
         fig.savefig(f'{title_plot}_static.png', bbox_inches='tight')
+
+
+def create_violin_plot(
+    data: pd.DataFrame,
+    plot_title: str = " ",
+    x_label: str = "",
+    y_label: str = "",
+    save_result: bool = False,
+    linewidth: int = 1
+):
+    """Create violin plot."""
+    ax = sns.violinplot(data=data, linewidth=linewidth)
+    ax.tick_params(axis="x", rotation=45)
+    ax.set(xlabel=x_label, ylabel=y_label, title=plot_title)
+
+    if save_result:
+        fig = ax.get_figure()
+        fig.savefig(f'{plot_title}_static.png', bbox_inches='tight')
