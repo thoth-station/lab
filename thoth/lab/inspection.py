@@ -58,6 +58,10 @@ _INSPECTION_MAPPING_PARAMETERS = {
     "build_duration": "build_duration",
     "elapsed": "job_log__stdout__@result__elapsed",
     "rate": "job_log__stdout__@result__rate",
+    "utime": "job_log__usage__ru_utime",
+    "stime": "job_log__usage__ru_stime",
+    "nvcsw": "job_log__usage__ru_nvcsw",
+    "nivcsw": "job_log__usage__ru_nivcsw",
 }
 
 
@@ -611,11 +615,12 @@ def create_inspection_parameters_dataframes(parameters: List[str], inspection_df
     inspection_parameters_df_dict = {}
 
     for parameter in parameters:
-
         parameter_df = pd.DataFrame()
 
         for identifier in list(inspection_df_dict.keys()):
-            parameter_df[identifier] = inspection_df_dict[identifier][_INSPECTION_MAPPING_PARAMETERS[parameter]].values
+            additional = pd.DataFrame()
+            additional[identifier] = inspection_df_dict[identifier][_INSPECTION_MAPPING_PARAMETERS[parameter]].values
+            parameter_df = pd.concat([parameter_df, additional], axis=1)
 
         inspection_parameters_df_dict[parameter] = parameter_df
 
@@ -685,18 +690,21 @@ def plot_interpolated_statistics_of_inspection_parameters(
     colour_list: List[str],
     statistical_quantities: List[str],
     title_ylabel: str = " ",
+    save_result: bool = False
 ):
     """Plot interpolated statistical quantity/ies of inspection parameter/s from different inspection batches."""
-    if len(inspection_parameters) == 1 and len(statistical_quantities) >= 1:
+    if len(inspection_parameters) == 1 and len(statistical_quantities) > 1:
         if len(colour_list) != len(statistical_quantities):
             logger.warning(f"List of statistical quantities and List of colours shall have the same length!")
         parameter_results = statistical_results_dict[inspection_parameters[0]]
         for i, quantity in enumerate(statistical_quantities):
             plt.plot(identifier_inspection_list, parameter_results[quantity], f"{colour_list[i]}o-", label=quantity)
             i += 1
-        plt.title(f"Statistics plot for {inspection_parameters} of different batch")
+        plt.title(f"Statistics plot for {inspection_parameters[0]} of different batch")
+        if save_result:
+            title = f"Statistics plot for {inspection_parameters[0]} of different batch"
 
-    elif len(inspection_parameters) >= 1 and len(statistical_quantities) == 1:
+    elif len(inspection_parameters) > 1 and len(statistical_quantities) == 1:
         if len(inspection_parameters) != len(colour_list):
             logger.warning(f"List of inspection parameters and List of colours shall have the same length!")
         for i, parameter in enumerate(inspection_parameters):
@@ -705,10 +713,23 @@ def plot_interpolated_statistics_of_inspection_parameters(
                 identifier_inspection_list,
                 parameter_results[statistical_quantities[0]],
                 f"{colour_list[i]}o-",
-                label=parameter,
+                label=parameter
             )
             i += 1
-        plt.title(f"Statistics plot for {statistical_quantities} of different batch for different parameters")
+        plt.title(f"Statistics plot for {statistical_quantities[0]} of different batch for different parameters")
+        if save_result:
+            title = f"Statistics plot for {statistical_quantities[0]} of different batch for different parameters"
+
+    elif len(inspection_parameters) == 1 and len(statistical_quantities) == 1:
+        if len(colour_list) != len(statistical_quantities):
+            logger.warning(f"List of statistical quantities and List of colours shall have the same length!")
+        parameter_results = statistical_results_dict[inspection_parameters[0]]
+        for i, quantity in enumerate(statistical_quantities):
+            plt.plot(identifier_inspection_list, parameter_results[quantity], f"{colour_list[i]}o-", label=quantity)
+            i += 1
+        plt.title(f"Statistics plot of {quantity} for {inspection_parameters[0]} of different batch")
+        if save_result:
+            title = f"Statistics plot of {quantity} for {inspection_parameters[0]} of different batch"
     else:
         logger.warning(
             """Combinations allowed:
@@ -721,6 +742,8 @@ def plot_interpolated_statistics_of_inspection_parameters(
     plt.ylabel(title_ylabel)
     plt.tick_params(axis="x", rotation=45)
     plt.legend()
+    if save_result:
+        plt.savefig(f'{title}.png', bbox_inches='tight')
     plt.show()
 
 
@@ -745,6 +768,41 @@ def create_inspection_time_dataframe(df_inspection_batches_dict: dict, n_paralle
     df_time["tot_time"] = tot_time_sum_builds_and_jobs
 
     return df_time
+
+
+def create_scatter_plots_for_multiple_batches(
+    inspection_df_dict: Dict[str, pd.DataFrame],
+    list_batches: List[str],
+    columns: Union[str, List[str]] = None,
+    title_scatter: str = " ",
+    x_label: str = " ",
+    y_label: str = " ",
+):
+    """Create Scatter plots for multiple batches.
+
+    :param inspection_df_dict: dictionary with data frame as returned by `process_inspection_results' per identifier
+    :param list_batches: list of batches to be used for correlation analysis
+    :param columns: parameters to be considered, taken from data frame as returned by `process_inspection_results'
+    :param title_scatter: scatter plot name
+    :param x_label: x label name
+    :param y_label: y label name
+    """
+    columns = columns if columns is not None else inspection_df_dict[list_batches[0]][columns].columns
+
+    figure = {
+        "data": [
+            {
+                "x": inspection_df_dict[batch][columns[0]],
+                "y": inspection_df_dict[batch][columns[1]],
+                "name": batch,
+                "mode": "markers",
+            }
+            for batch in list_batches
+        ],
+        "layout": {"title": title_scatter, "xaxis": {"title": x_label}, "yaxis": {"title": y_label}},
+    }
+
+    return figure
 
 
 # General functions
@@ -780,7 +838,8 @@ def create_plot_multiple_batches(
     plot_title: str = " ",
     x_label: str = "",
     y_label: str = "",
-    static: str = True
+    static: str = True,
+    save_result: bool = False
 ):
     """Create (Histogram or Box) plot using several columns of the dataframe(static as default)."""
     if not static:
@@ -796,22 +855,27 @@ def create_plot_multiple_batches(
                              title=plot_title,
                              xTitle=x_label,
                              yTitle=y_label)
-
+        if save_result:
+            logger.warning("Save figure: Not provided for interactive plot yet!!")
         return fig
 
     if plot_type == "box":
-        fig = data.plot(kind="box", title=plot_title)
-        fig.set_ylabel(x_label)
-        fig.set_ylabel(y_label)
-        fig.tick_params(axis="x", rotation=45)
+        px = data.plot(kind="box", title=plot_title)
+        px.set_ylabel(x_label)
+        px.set_ylabel(y_label)
+        px.tick_params(axis="x", rotation=45)
 
     if plot_type == "hist":
-        fig = data.plot(kind="hist", title=plot_title)
-        fig.set_ylabel(x_label)
-        fig.set_ylabel(y_label)
-        fig.tick_params(axis="x", rotation=45)
+        px = data.plot(kind="hist", title=plot_title)
+        px.set_ylabel(x_label)
+        px.set_ylabel(y_label)
+        px.tick_params(axis="x", rotation=45)
 
-    return fig
+    if save_result:
+        fig = px.get_figure()
+        fig.savefig(f'{plot_title}_static.png', bbox_inches='tight')
+
+    return px
 
 
 def create_plot_from_df(
@@ -821,6 +885,7 @@ def create_plot_from_df(
     x_label: str = " ",
     y_label: str = " ",
     static: str = True,
+    save_result: bool = False
 ):
     """Create plot using two columns of the DataFrame."""
     columns = columns if columns is not None else data[columns].columns
@@ -836,8 +901,14 @@ def create_plot_from_df(
             }
         )
 
+        if save_result:
+            logger.warning("Save figure: Not provided for interactive plot yet!!")
         return fig
 
     px = data[columns].plot(x=columns[0], title=title_plot)
     px.set_xlabel(x_label)
     px.set_ylabel(y_label)
+    px.tick_params(axis="x", rotation=45)
+    if save_result:
+        fig = px.get_figure()
+        fig.savefig(f'{title_plot}_static.png', bbox_inches='tight')
