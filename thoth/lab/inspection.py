@@ -19,6 +19,7 @@
 import functools
 import logging
 import re
+import os
 
 import numpy as np
 import pandas as pd
@@ -37,6 +38,8 @@ from prettyprinter import pformat
 
 from typing import Any, Dict, List, Tuple, Union
 from typing import Callable, Iterable
+
+from pathlib import Path
 
 from plotly import graph_objs as go
 from plotly import figure_factory as ff
@@ -541,20 +544,20 @@ def show_categories(inspection_df: pd.DataFrame):
 
     results_categories = {}
     for n, idx in enumerate(index.values):
-        logger.debug(f"\nClass {n + 1}/{len(index)}")
+        logger.info(f"\nClass {n + 1}/{len(index)}")
 
         class_results = {}
         if len(index.names) > 1:
             for name, ind in zip(index.names, idx):
-                logger.debug(f"{name} : {ind}")
+                logger.info(f"{name} : {ind}")
                 class_results[name] = ind
         else:
-            logger.debug(f"{index.names[0]} : {idx}")
+            logger.info(f"{index.names[0]} : {idx}")
             class_results[index.names[0]] = idx
         results_categories[n + 1] = class_results
 
         frame = inspection_df.loc[idx]
-        logger.debug(f"Number of rows (jobs) is: {frame.shape[0]}")
+        logger.info(f"Number of rows (jobs) is: {frame.shape[0]}")
 
     return results_categories
 
@@ -633,7 +636,6 @@ def create_inspection_parameters_dataframes(parameters: List[str], inspection_df
 
 def evaluate_statistics(inspection_df: pd.DataFrame, inspection_parameter: str) -> Dict:
     """Evaluate statistical quantities of a specific parameter of inspection results."""
-    cv = inspection_df[inspection_parameter].std() / inspection_df[inspection_parameter].mean() * 100
     std_error = inspection_df[inspection_parameter].std() / np.sqrt(inspection_df[inspection_parameter].shape[0])
     std = inspection_df[inspection_parameter].std()
     median = inspection_df[inspection_parameter].median()
@@ -641,11 +643,18 @@ def evaluate_statistics(inspection_df: pd.DataFrame, inspection_parameter: str) 
     q1 = q[0.25]
     q3 = q[0.75]
     iqr = q3 - q1
+    cv_mean = inspection_df[inspection_parameter].std() / inspection_df[inspection_parameter].mean() * 100
+    cv_median = inspection_df[inspection_parameter].std() / inspection_df[inspection_parameter].median() * 100
+    cv_q1 = inspection_df[inspection_parameter].std() / q1 * 100
+    cv_q3 = inspection_df[inspection_parameter].std() / q3 * 100
     maxr = inspection_df[inspection_parameter].max()
     minr = inspection_df[inspection_parameter].min()
 
     return {
-        "cv": cv,
+        "cv_mean": cv_mean,
+        "cv_median": cv_median,
+        "cv_q1": cv_q1,
+        "cv_q3": cv_q3,
         "std_error": std_error,
         "std": std,
         "median": median,
@@ -693,26 +702,30 @@ def plot_interpolated_statistics_of_inspection_parameters(
     inspection_parameters: List[str],
     colour_list: List[str],
     statistical_quantities: List[str],
-    title_plot: str = "",
+    title_plot: str = " ",
     title_xlabel: str = " ",
     title_ylabel: str = " ",
-    save_result: bool = False
+    save_result: bool = False,
+    project_folder: str = "",
+    folder_name: str = "",
 ):
     """Plot interpolated statistical quantity/ies of inspection parameter/s from different inspection batches."""
     if len(inspection_parameters) == 1 and len(statistical_quantities) > 1:
         if len(colour_list) != len(statistical_quantities):
             logger.warning(f"List of statistical quantities and List of colours shall have the same length!")
+
         parameter_results = statistical_results_dict[inspection_parameters[0]]
+
         for i, quantity in enumerate(statistical_quantities):
             plt.plot(identifier_inspection_list, parameter_results[quantity], f"{colour_list[i]}o-", label=quantity)
             i += 1
+
         plt.title(title_plot)
-        if save_result:
-            title = title_plot
 
     elif len(inspection_parameters) > 1 and len(statistical_quantities) == 1:
         if len(inspection_parameters) != len(colour_list):
             logger.warning(f"List of inspection parameters and List of colours shall have the same length!")
+
         for i, parameter in enumerate(inspection_parameters):
             parameter_results = statistical_results_dict[parameter]
             plt.plot(
@@ -722,20 +735,21 @@ def plot_interpolated_statistics_of_inspection_parameters(
                 label=parameter,
             )
             i += 1
+
         plt.title(title_plot)
-        if save_result:
-            title = title_plot
 
     elif len(inspection_parameters) == 1 and len(statistical_quantities) == 1:
         if len(colour_list) != len(statistical_quantities):
             logger.warning(f"List of statistical quantities and List of colours shall have the same length!")
+
         parameter_results = statistical_results_dict[inspection_parameters[0]]
+
         for i, quantity in enumerate(statistical_quantities):
             plt.plot(identifier_inspection_list, parameter_results[quantity], f"{colour_list[i]}o-", label=quantity)
             i += 1
+
         plt.title(title_plot)
-        if save_result:
-            title = title_plot
+
     else:
         logger.warning(
             """Combinations allowed:
@@ -748,8 +762,27 @@ def plot_interpolated_statistics_of_inspection_parameters(
     plt.ylabel(title_ylabel)
     plt.tick_params(axis="x", rotation=45)
     plt.legend()
+
     if save_result:
-        plt.savefig(f'{title}.png', bbox_inches='tight')
+
+        if project_folder != "":
+            current_path = Path.cwd()
+            project_dir_path = current_path.joinpath(project_folder)
+
+            logger.info("Creating Project folder (if not already created!!)")
+            os.makedirs(project_dir_path, exist_ok=True)
+
+            if folder_name != "":
+                new_dir_path = project_dir_path.joinpath(folder_name)
+                logger.info("Creating sub-folder (if not already created!!)")
+                os.makedirs(new_dir_path, exist_ok=True)
+                plt.savefig(f'{new_dir_path}/{title_plot}_static.png', bbox_inches='tight')
+
+            else:
+                plt.savefig(f'{project_dir_path}/{title_plot}_static.png', bbox_inches='tight')
+        else:
+            logger.warning("No project folder name provided!!")
+
     plt.show()
 
 
@@ -845,7 +878,9 @@ def create_plot_multiple_batches(
     x_label: str = "",
     y_label: str = "",
     static: str = True,
-    save_result: bool = False
+    save_result: bool = False,
+    project_folder: str = "",
+    folder_name: str = ""
 ):
     """Create (Histogram or Box) plot using several columns of the dataframe(static as default)."""
     if not static:
@@ -857,10 +892,11 @@ def create_plot_multiple_batches(
                              yTitle=y_label)
 
         if plot_type == "hist":
-            fig = data.iplot(kind="histogram", bins=15, theme="white",
+            fig = data.iplot(kind="histogram", theme="white",
                              title=plot_title,
                              xTitle=x_label,
                              yTitle=y_label)
+
         if save_result:
             logger.warning("Save figure: Not provided for interactive plot yet!!")
         return fig
@@ -878,8 +914,26 @@ def create_plot_multiple_batches(
         px.tick_params(axis="x", rotation=45)
 
     if save_result:
-        fig = px.get_figure()
-        fig.savefig(f'{plot_title}_static.png', bbox_inches='tight')
+
+        if project_folder != "":
+            current_path = Path.cwd()
+            project_dir_path = current_path.joinpath(project_folder)
+
+            logger.info("Creating Project folder (if not already created!!)")
+            os.makedirs(project_dir_path, exist_ok=True)
+
+            if folder_name != "":
+                new_dir_path = project_dir_path.joinpath(folder_name)
+                logger.info("Creating sub-folder (if not already created!!)")
+                os.makedirs(new_dir_path, exist_ok=True)
+                fig = px.get_figure()
+                fig.savefig(f'{new_dir_path}/{plot_title}_static.png', bbox_inches='tight')
+
+            else:
+                fig = px.get_figure()
+                fig.savefig(f'{project_dir_path}/{plot_title}_static.png', bbox_inches='tight')
+        else:
+            logger.warning("No project folder name provided!!")
 
     return px
 
@@ -891,7 +945,9 @@ def create_plot_from_df(
     x_label: str = " ",
     y_label: str = " ",
     static: str = True,
-    save_result: bool = False
+    save_result: bool = False,
+    project_folder: str = "",
+    folder_name: str = ""
 ):
     """Create plot using two columns of the DataFrame."""
     columns = columns if columns is not None else data[columns].columns
@@ -915,9 +971,28 @@ def create_plot_from_df(
     px.set_xlabel(x_label)
     px.set_ylabel(y_label)
     px.tick_params(axis="x", rotation=45)
+
     if save_result:
-        fig = px.get_figure()
-        fig.savefig(f'{title_plot}_static.png', bbox_inches='tight')
+
+        if project_folder != "":
+            current_path = Path.cwd()
+            project_dir_path = current_path.joinpath(project_folder)
+
+            logger.info("Creating Project folder (if not already created!!)")
+            os.makedirs(project_dir_path, exist_ok=True)
+
+            if folder_name != "":
+                new_dir_path = project_dir_path.joinpath(folder_name)
+                logger.info("Creating sub-folder (if not already created!!)")
+                os.makedirs(new_dir_path, exist_ok=True)
+                fig = px.get_figure()
+                fig.savefig(f'{new_dir_path}/{title_plot}_static.png', bbox_inches='tight')
+
+            else:
+                fig = px.get_figure()
+                fig.savefig(f'{project_dir_path}/{title_plot}_static.png', bbox_inches='tight')
+        else:
+            logger.warning("No project folder name provided!!")
 
 
 def create_violin_plot(
@@ -926,6 +1001,8 @@ def create_violin_plot(
     x_label: str = "",
     y_label: str = "",
     save_result: bool = False,
+    project_folder: str = "",
+    folder_name: str = "",
     linewidth: int = 1
 ):
     """Create violin plot."""
@@ -934,5 +1011,23 @@ def create_violin_plot(
     ax.set(xlabel=x_label, ylabel=y_label, title=plot_title)
 
     if save_result:
-        fig = ax.get_figure()
-        fig.savefig(f'{plot_title}_static.png', bbox_inches='tight')
+
+        if project_folder != "":
+            current_path = Path.cwd()
+            project_dir_path = current_path.joinpath(project_folder)
+
+            logger.info("Creating Project folder (if not already created!!)")
+            os.makedirs(project_dir_path, exist_ok=True)
+
+            if folder_name != "":
+                new_dir_path = project_dir_path.joinpath(folder_name)
+                logger.info("Creating sub-folder (if not already created!!)")
+                os.makedirs(new_dir_path, exist_ok=True)
+                fig = ax.get_figure()
+                fig.savefig(f'{new_dir_path}/{plot_title}_static.png', bbox_inches='tight')
+
+            else:
+                fig = ax.get_figure()
+                fig.savefig(f'{project_dir_path}/{plot_title}_static.png', bbox_inches='tight')
+        else:
+            logger.warning("No project folder name provided!!")
