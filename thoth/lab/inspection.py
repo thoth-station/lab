@@ -846,7 +846,6 @@ def columns_to_analyze(df: pd.DataFrame, low=0, high=len(df_original),
                 pass
 
     # Filters data frame to columns with distinct value counts within the limit
-
     df_analyze = df[lst_columns_to_analyze]
     if display_clusters is True:
         printmd("#### Inspection result count organized by parameter + parameter values")
@@ -953,11 +952,11 @@ def plot_subcategories_by_hues(df_cat: pd.DataFrame, df: pd.DataFrame, column):
         g.add_legend()
 
 
-def concatenated_df(lst_of_df, column):
+def concatenated_df(lst_of_df: list, column: string):
     """Reorganize dataframe to show the distribution of jobs in a category across different subsets of data.
 
-    :param lst_of_df: inspection result dataframes which can be different datasets or subset of datasets
-    :param column: category for grouping to see the distribution of results
+    :param lst_of_df: list of inspection result dataframes which can be different datasets or subset of datasets
+    :param column: column name or category for grouping to see the distribution of results
     """
     lst_processed = []
     for i in lst_of_df:
@@ -973,11 +972,12 @@ def concatenated_df(lst_of_df, column):
 
 
 def summary_trace_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst=[]):
-    """Create trace plot scaled by percentage of compositions of each parameter analyzed.
+    """Create trace plot scaled by percentage of compositions of each parameter analyzed with clusters to analyze
+    separated by hues.
 
     :param df: data frame with duration information as returned by process_inspection_results
     :param df_categories: filtered dataframe with columns to analyze as returned by columns_to_analyze
-    :param lst: list of set or subset dataframes of data with the last value in the list being entire data set
+    :param lst: dataframes of clustered data (if any) appended to dataframe of entire dataset (ie: [df_left_cluster, df_right_cluster, df_duration])
     """
     fig = plt.figure(figsize=(15, len(df_categories.columns)*4))
     lst_df = []
@@ -1036,29 +1036,30 @@ def summary_bar_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst_of_clust
         count += 1
 
 
-def plot_distribution_of_jobs_combined_categories(df: pd.DataFrame, df_duration: pd.DataFrame,
+def plot_distribution_of_jobs_combined_categories(df_hardware_category: pd.DataFrame, df_duration: pd.DataFrame,
                                                   df_analyze: pd.DataFrame):
-    """Create trace stacked plot scaled by total jobs of each parameter within clusters if any.
+    """
+    Plots the job duration distribution for each unique hardware combination/configuration of data.
 
-    :param df: data frame with duration information as returned by process_inspection_results
-    :param df_categories:  filtered dataframe with columns to analyze as returned by columns_to_analyze
-    :param lst_of_clusters: list of subset dataframes with the last value in the list being entire data set
+    :param df_hardware_category: dataframe of of parameters to analyze grouped by distinct rows
+    :param df_duration:  dataframe with duration information as returned by process_inspection_results
+    :param df_analyze: dataframe of parameters that show variation across the clusters
     """
     list_df_combinations = []
-    for i in range(len(df)):
+    for i in range(len(df_hardware_category)):
         ll = []
-        for j in range(len(df.columns)-1):
-            ll.append((df_analyze[df.columns[j]] == df.iloc[i, j]))
+        for j in range(len(df_hardware_category.columns)-1):
+            ll.append((df_analyze[df_hardware_category.columns[j]] == df_hardware_category.iloc[i, j]))
         df_new = df_duration[np.logical_and.reduce(ll)]
 
         list_df_combinations.append(df_new)
 
-    fig = plt.figure(figsize=(5, 4*len(df)))
+    fig = plt.figure(figsize=(5, 4*len(df_hardware_category)))
     fig.subplots_adjust(hspace=0.7, wspace=0.7)
-    for i in range(len(df)):
-        plt.subplot(len(df), 1, i+1)
+    for i in range(len(df_hardware_category)):
+        plt.subplot(len(df_hardware_category), 1, i+1)
         g = sns.distplot(list_df_combinations[i]["status__job__duration"], kde=True)
-        g.set_title(str(df.loc[i]), fontsize=6)
+        g.set_title(str(df_hardware_category.loc[i]), fontsize=6)
 
 
 # Function takes in a column and prints out the feature class
@@ -1135,7 +1136,6 @@ def unique_value_count_by_feature_class(df: pd.DataFrame):
     """Print unique count values per feature/class.
 
     Print results per feature/class that are subdivided in subclasses that map to it.
-
 
     :param df: processed dataframe as returned by the process_empty_or_mutable_parameters
     """
