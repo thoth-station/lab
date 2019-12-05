@@ -817,6 +817,8 @@ def columns_to_analyze(df: pd.DataFrame, low=0, high=len(df_original),
     :param df: data frame to analyze as returned by `process_inspection_results'
     :param low: the lower limit (0 if not specified) of distinct value counts
     :param high: the upper limit (size of data set if not specified) of distinct value counts
+    :param display_clusters: if true, displays grouped counts of parameter and parameter sort_values
+    :param cluster_by_hue: if true, displays distribution of parameters to analyze sorted by hues
     """
     lst_columns_to_analyze = []
 
