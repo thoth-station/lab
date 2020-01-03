@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # Thoth lab documentation build configuration file, created by
 # sphinx-quickstart on Thu Mar 14 20:01:28 2019.
