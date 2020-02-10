@@ -9,3 +9,21 @@ runtime_environments:
       version: "7"
     python_version: "3.6"
     recommendation_type: latest
+
+managers:
+  - name: pipfile-requirements
+  - name: update
+    configuration:
+      labels: [bot]
+  - name: info
+  - name: version
+    configuration:
+      maintainers:
+        - goern
+        - fridex
+        - CermakM
+        - harshad16
+      assignees:
+        - sesheta
+      labels: [bot]
+      changelog_file: true
