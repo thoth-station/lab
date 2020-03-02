@@ -102,3 +102,28 @@
 * Remove Gremlin imports
 * Remove gremlinpython from dependencies
 * Update Zuul config
+
+## Release 0.1.2 (2020-03-02T08:54:50)
+* Update .thoth.yaml
+* Happy new year!
+* Add Thamos documentation
+* Point documentation to other libraries
+* Add Google Analytics
+* Change Sphinx theme
+* Do not pin down plotly, otherwise locking fails
+* New feature to save plots in project folder
+* Added violin plots
+* Added new parameters for statistics
+* Generalized retrieve from InspectionStore
+* Improved description
+* Finalized functions and updated requirements
+* updated coala length
+* Finalized functions and updated requirements
+* Functions changes
+* Improved functions and added new functions for time
+* Functions to automatically create report and compare report results
+* Created new functions for inspection results and correlations
+* Corrected measurement unit
+* Format underscore module with black
+* Fix incorrect indexing in `groupby` method
+* Fix unintentional comments in requirements.txt
