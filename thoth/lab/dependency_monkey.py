@@ -4,7 +4,7 @@ import sys
 from typing import Union, List, Dict, Any
 from thoth.storages import DependencyMonkeyReportsStore
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger("thoth.lab.depedendency_monkey")
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
@@ -40,14 +40,14 @@ def aggregate_dm_results_per_identifier(
         report = document["result"].get("report")
         inspection_batch_ids_specifications = {}
 
-        inspection_batch_ids_specifications, inspection_batch_identifiers, inspection_batch_counter = extract_dm_responses_from_report(
+        inspection_batch_ids_specifications, inspection_batch_identifiers, inspection_batch_counter = _extract_dm_responses_from_report(
             report=report,
             inspection_specification=inspection_batch_ids_specifications,
             inspection_batch_identifiers=inspection_batch_identifiers,
             identifiers=identifiers_inspection,
             inspection_batch_counter=inspection_batch_counter,
             max_ids=max_batch_identifiers_ids,
-            limit_results=limit_results
+            limit_results=limit_results,
         )
 
         if inspection_batch_ids_specifications:
@@ -69,7 +69,7 @@ def aggregate_dm_results_per_identifier(
     return dm_info_dict, inspection_batch_identifiers
 
 
-def extract_dm_responses_from_report(
+def _extract_dm_responses_from_report(
     report: Dict[str, Any],
     inspection_specification: Dict[str, Any],
     inspection_batch_identifiers: List[str],
@@ -87,7 +87,7 @@ def extract_dm_responses_from_report(
             return inspection_specification, inspection_batch_identifiers, inspection_batch_counter
 
     responses = report.get("responses")
-    inspection_specification, inspection_batch_identifiers, inspection_batch_counter = extract_dm_product_from_responses(
+    inspection_specification, inspection_batch_identifiers, inspection_batch_counter = _extract_dm_product_from_responses(
         responses=responses,
         inspection_specification=inspection_specification,
         inspection_batch_identifiers=inspection_batch_identifiers,
@@ -100,7 +100,7 @@ def extract_dm_responses_from_report(
     return inspection_specification, inspection_batch_identifiers, inspection_batch_counter
 
 
-def extract_dm_product_from_responses(
+def _extract_dm_product_from_responses(
     responses: List[Dict[str, Any]],
     inspection_specification: Dict[str, Any],
     inspection_batch_identifiers: List[str],

@@ -80,10 +80,7 @@ _INSPECTION_MAPPING_PARAMETERS = {
 
 _PERFORMANCE_QUANTITY = ["elapsed_time", "rate"]
 
-_PERFORMANCE_QUANTITY_MAP = {
-    "elapsed_time": "Elapsed Time [ms]",
-    "rate": "Rate [GFLOPS]"
-}
+_PERFORMANCE_QUANTITY_MAP = {"elapsed_time": "Elapsed Time [ms]", "rate": "Rate [GFLOPS]"}
 
 
 def extract_structure_json(input_json: dict, upper_key: str, depth: int, json_structure):
@@ -141,7 +138,9 @@ def filter_inspection_ids(inspection_identifiers: List[str]) -> dict:
     """
     inspection_store = InspectionResultsStore()
     inspection_store.connect()
-    filtered_inspection_ids, reduced_inspection_batch_identifiers = filter_document_ids(inspection_store, inspection_identifiers=inspection_identifiers)
+    filtered_inspection_ids, reduced_inspection_batch_identifiers = filter_document_ids(
+        inspection_store, inspection_identifiers=inspection_identifiers
+    )
 
     inspections_selected = sum([len(batch_n) for batch_n in filtered_inspection_ids.values()])
     inspection_batches = [(batch_name, len(batch_count)) for batch_name, batch_count in filtered_inspection_ids.items()]
@@ -149,10 +148,9 @@ def filter_inspection_ids(inspection_identifiers: List[str]) -> dict:
 
     return filtered_inspection_ids, reduced_inspection_batch_identifiers
 
+
 def show_inspection_inputs(
-    filtered_inspection_ids: List[str],
-    inspection_batch_ids: List[str],
-    filtered_inspection_batch_ids: List[str]
+    filtered_inspection_ids: List[str], inspection_batch_ids: List[str], filtered_inspection_batch_ids: List[str]
 ):
     """Show inspections inputs for the analysis.
 
@@ -162,13 +160,14 @@ def show_inspection_inputs(
     """
     total_inspections = 0
     logger.info("insepction_batch_id | Number of inspections")
-    for insepction_batch_id , inspections in filtered_inspection_ids.items():
+    for insepction_batch_id, inspections in filtered_inspection_ids.items():
         logger.info(f"{insepction_batch_id} | {len(inspections)}")
         total_inspections += len(inspections)
 
     logger.info(f"Initial inspection batches considered: {len(inspection_batch_ids)}")
     logger.info(f"Inspections batches after filtering: {len(filtered_inspection_batch_ids)}")
     logger.info(f"Total number of inspections considered: {total_inspections}")
+
 
 def filter_document_ids(inspection_store, inspection_identifiers: List[str]) -> Dict[str, List]:
     """Filter inspection document ids list according to the inspection identifiers selected.
@@ -177,7 +176,7 @@ def filter_document_ids(inspection_store, inspection_identifiers: List[str]) -> 
     """
     inspection_document_ids = list(inspection_store.get_document_listing())
     filtered_inspection_document_ids = {}
-    
+
     for sid in inspection_document_ids:
         for i in inspection_identifiers:
             if i in sid:
@@ -186,10 +185,11 @@ def filter_document_ids(inspection_store, inspection_identifiers: List[str]) -> 
                     filtered_inspection_document_ids[i].append(sid)
                 else:
                     filtered_inspection_document_ids[i].append(sid)
-    
+
     reduced_inspection_batch_identifiers = [k for k in filtered_inspection_document_ids.keys()]
 
     return filtered_inspection_document_ids, reduced_inspection_batch_identifiers
+
 
 def process_inspection_results(
     inspection_results: List[dict],
@@ -197,7 +197,7 @@ def process_inspection_results(
     apply: List[Tuple] = None,
     drop: bool = True,
     verbose: bool = False,
-    duration_info: bool = False
+    duration_info: bool = False,
 ) -> pd.DataFrame:
     """Process inspection result into pd.DataFrame."""
     if not inspection_results:
@@ -247,6 +247,7 @@ def process_inspection_results(
 
     return df
 
+
 def aggregate_inspection_results_per_identifier(
     inspection_ids: List[str], identifier_inspection: List[str], inspection_batch_data: Dict[str, dict]
 ) -> dict:
@@ -285,7 +286,7 @@ def aggregate_inspection_results_per_identifier(
                         document["runtime_environment"] = specification["runtime_environment"]
                         # pop build logs to save some memory (not necessary for now)
                         document["build_log"] = None
-                        logger.info(document['datetime'])
+                        logger.info(document["datetime"])
                         inspection_results_dict[identifier_batch].append(document)
                     except Exception as e:
                         inspections_error_counter += 1
@@ -298,6 +299,7 @@ def aggregate_inspection_results_per_identifier(
     logger.info("Percentage of error in inspection results: %r" % percentage_error)
 
     return inspection_results_dict
+
 
 def extract_specification(inspection_batch_result: Dict[str, Any], inspection_id: str):
     """Extract specification info for the inspection."""
@@ -671,40 +673,32 @@ def create_inspection_dataframes(inspection_results_dict: dict, duration_info: b
             inspection_df_dict[identifier]["build_duration"] = df_duration["build_duration"]
 
         inspections_df = pd.DataFrame(columns=columns_list)
-    
+
     if not inspection_df_dict:
         logger.info(f"No inspections identified.")
         return inspection_df_dict, inspections_df
 
-    _INSPECTION_PERFORMANCE_VALUES = [
-        "stdout__@result__elapsed",
-        "stdout__@result__rate"
-    ]
+    _INSPECTION_PERFORMANCE_VALUES = ["stdout__@result__elapsed", "stdout__@result__rate"]
     index = 0
     for dataframe in inspection_df_dict.values():
-        new_df = evaluate_statistics_on_inspection_df(
-            df=dataframe,
-            column_names=_INSPECTION_PERFORMANCE_VALUES
-        )
+        new_df = evaluate_statistics_on_inspection_df(df=dataframe, column_names=_INSPECTION_PERFORMANCE_VALUES)
         inspections_df.loc[index] = new_df.iloc[0]
         index += 1
 
     return inspection_df_dict, inspections_df
 
 
-def evaluate_statistics_on_inspection_df(
-    df: pd.DataFrame,
-    column_names: List[str]
-) -> pd.DataFrame:
+def evaluate_statistics_on_inspection_df(df: pd.DataFrame, column_names: List[str]) -> pd.DataFrame:
     """Evaluate statistics on performance values selected from Dataframe columns."""
     new_data = {}
     for c_name in df.columns.values:
-        if c_name in  column_names:
+        if c_name in column_names:
             new_data[c_name] = [df[c_name].median()]
         else:
             new_data[c_name] = [df[c_name].iloc[0]]
 
     return pd.DataFrame(new_data, index=[0], columns=df.columns.values)
+
 
 def create_python_package_df(inspection_df: pd.DataFrame) -> Union[pd.DataFrame, dict]:
     """Create DataFrame with only python packages present in software stacks."""
@@ -716,7 +710,13 @@ def create_python_package_df(inspection_df: pd.DataFrame) -> Union[pd.DataFrame,
             python_packages_versions_names.append(c_name.split("__")[2])
 
     for package in python_packages_versions_names:
-        package_info = inspection_df[[col for col in inspection_df.columns.values if "".join([package, "__index"]) in col or "".join([package, "__version"]) in col]]
+        package_info = inspection_df[
+            [
+                col
+                for col in inspection_df.columns.values
+                if "".join([package, "__index"]) in col or "".join([package, "__version"]) in col
+            ]
+        ]
         for row in range(package_info.shape[0]):
             version = package_info.loc[row].values[1]
             index = package_info.loc[row].values[0]
@@ -735,10 +735,9 @@ def create_python_package_df(inspection_df: pd.DataFrame) -> Union[pd.DataFrame,
 
     return pd.DataFrame(python_packages_versions), python_packages_versions
 
+
 def create_final_dataframe(
-    packages_versions: dict,
-    python_packages_dataframe: pd.DataFrame,
-    df: pd.DataFrame
+    packages_versions: dict, python_packages_dataframe: pd.DataFrame, df: pd.DataFrame
 ) -> pd.DataFrame:
     """Create final dataframe with all information required for plots."""
     label_encoder = LabelEncoder()
@@ -748,16 +747,18 @@ def create_final_dataframe(
     sws_encoded = []
     for index, row in python_packages_dataframe.iterrows():
         sws_string = "<br>".join(["".join(pkg) for pkg in row.values if pkg != ("", "", "")])
-        hash_object = hashlib.sha256(bytes(sws_string, 'raw_unicode_escape'))
+        hash_object = hashlib.sha256(bytes(sws_string, "raw_unicode_escape"))
         hex_dig = hash_object.hexdigest()
         sws_encoded.append([row.values, sws_string, hex_dig])
 
     re_encoded = []
-    for index, row in df[["os_release__id", "os_release__version_id", "requirements__requires__python_version"]].iterrows():
+    for index, row in df[
+        ["os_release__id", "os_release__version_id", "requirements__requires__python_version"]
+    ].iterrows():
         re_values = [re for re in row.values]
         re_values[2] = "".join(["py", "".join(re_values[2].split("."))])
         re_string = "-".join(re_values)
-        hash_object = hashlib.sha256(bytes(re_string, 'raw_unicode_escape'))
+        hash_object = hashlib.sha256(bytes(re_string, "raw_unicode_escape"))
         hex_dig = hash_object.hexdigest()
         re_encoded.append([row.values, re_string, hex_dig])
 
@@ -776,32 +777,33 @@ def create_final_dataframe(
     processed_string_result["re_string"] = [pp[1] for pp in re_encoded]
     processed_string_result["re_hash_id"] = [pp[2] for pp in re_encoded]
 
-    #PI
+    # PI
     processed_string_result["pi_name"] = [pi_n[0] for pi_n in df[["stdout__name"]].values]
     processed_string_result["pi_component"] = [pi_c[0] for pi_c in df[["stdout__component"]].values]
     processed_string_result["pi_sha256"] = [pi_c[0] for pi_c in df[["script_sha256"]].values]
 
-    #PI performance results
+    # PI performance results
     processed_string_result["elapsed_time"] = [r_e[0] for r_e in df[["stdout__@result__elapsed"]].values]
     processed_string_result["rate"] = [r_r[0] for r_r in df[["stdout__@result__rate"]].values]
 
     final_df = pd.DataFrame(processed_string_result)
 
-    return  final_df
+    return final_df
+
 
 def create_filtered_df(
     df: pd.DataFrame,
     pi_name: Optional[str] = None,
     pi_component: Optional[str] = None,
     runtime_environment: Optional[str] = None,
-    packages: Optional[List[Tuple[str, str, str]]] = None
+    packages: Optional[List[Tuple[str, str, str]]] = None,
 ) -> pd.DataFrame:
     """Create dataframe using the filters selected for plots."""
     if not df.shape[0]:
         logger.info("DataFrame provided is empty, nothing can be filtered.")
 
     filters = []
-    
+
     if pi_name:
         filters.append(("pi_name", pi_name))
 
@@ -810,19 +812,20 @@ def create_filtered_df(
 
     if runtime_environment:
         filters.append(("re_string", runtime_environment))
-    
+
     if packages:
         for package in packages:
             filters.append((package[0], package))
 
     filtered_final_df = filter_df(df, filters)
-    
+
     if not filtered_final_df.shape[0]:
         logger.info("There are no results for the filters selected. Please change filters.")
 
     logger.info(f"Number of software stacks identified: {filtered_final_df.shape[0]}")
 
     return filtered_final_df
+
 
 def filter_df(df, *args):
     """Filter Dataframe."""
@@ -831,19 +834,15 @@ def filter_df(df, *args):
             df = df[df[k] == v]
     return df
 
-def create_inspection_3d_plot(
-    plot_df: pd.DataFrame,
-    quantity: str,
-    identifiers_inspections: List[str]
-):
+
+def create_inspection_3d_plot(plot_df: pd.DataFrame, quantity: str, identifiers_inspections: List[str]):
     """Create inspection performance parameters plot in 3D.
-    
+
     :param plot_df dataframe for plot of inspections results
     """
-
     if quantity not in _PERFORMANCE_QUANTITY:
         logging.info(f"Only {_PERFORMANCE_QUANTITY} are accepted as quantity")
-        return 
+        return
 
     label_encoder = LabelEncoder()
 
@@ -859,17 +858,17 @@ def create_inspection_3d_plot(
         x=X,
         y=integer_y_encoded,
         z=Z,
-        mode='markers',
+        mode="markers",
         hovertext=[yc[0] for yc in plot_df[["sws_string"]].values],
         hoverinfo="text",
         marker=dict(
             size=12,
-            color=Z,                # set color to an array/list of desired values
-            colorscale='Viridis',   # choose a colorscale
-            opacity=0.8, 
+            color=Z,  # set color to an array/list of desired values
+            colorscale="Viridis",  # choose a colorscale
+            opacity=0.8,
             showscale=True,
         ),
-        name=f"PI=Conv2D-tensorflow-{identifiers_inspections}"
+        name=f"PI=Conv2D-tensorflow-{identifiers_inspections}",
     )
 
     data = [trace1]
@@ -878,50 +877,40 @@ def create_inspection_3d_plot(
     c = 0
 
     for (x, y, z) in zip(X, integer_y_encoded, Z):
-        annotations.append(dict(
+        annotations.append(
+            dict(
                 showarrow=False,
                 x=x,
                 y=y,
                 z=z,
-                text="".join(plot_df['tensorflow'].values[c]),
+                text="".join(plot_df["tensorflow"].values[c]),
                 xanchor="left",
                 xshift=15,
-                opacity=0.7
+                opacity=0.7,
             )
         )
         c += 1
 
     layout = go.Layout(
-        title = "PI=Conv2D",
-        margin=dict(
-            l=0,
-            r=0,
-            b=0,
-            t=0
-        ),
-        scene = dict(
-            xaxis = dict(
-                title='Runtime Environment'),
-            yaxis = dict(
-                title='Software Stack ID integer encoded'),
-            zaxis = dict(
-                title=_PERFORMANCE_QUANTITY_MAP[quantity]),
-    #         annotations=annotations,
+        title="PI=Conv2D",
+        margin=dict(l=0, r=0, b=0, t=0),
+        scene=dict(
+            xaxis=dict(title="Runtime Environment"),
+            yaxis=dict(title="Software Stack ID integer encoded"),
+            zaxis=dict(title=_PERFORMANCE_QUANTITY_MAP[quantity]),
+            #         annotations=annotations,
         ),
         showlegend=True,
-        legend=dict(orientation="h")
+        legend=dict(orientation="h"),
     )
     fig = go.Figure(data=data, layout=layout)
 
-    iplot(fig, filename='3d-scatter-colorscale')
+    iplot(fig, filename="3d-scatter-colorscale")
 
-def create_inspection_2d_plot(
-    plot_df: pd.DataFrame,
-    quantity: str,
-    identifiers_inspections: List[str]
-):
+
+def create_inspection_2d_plot(plot_df: pd.DataFrame, quantity: str, identifiers_inspections: List[str]):
     """Create inspection performance parameters plot in 3D.
-    
+
     :param plot_df dataframe for plot of inspections results
     """
     label_encoder = LabelEncoder()
@@ -932,21 +921,23 @@ def create_inspection_2d_plot(
     trace = go.Scatter(
         x=integer_y_encoded,
         y=Z,
-        mode='markers',
+        mode="markers",
         hovertext=[y[0] for y in plot_df[["sws_string"]].values],
         hoverinfo="text",
         marker=dict(
             size=12,
-            color=Z,                # set color to an array/list of desired values
-            colorscale='Viridis',   # choose a colorscale
-            opacity=0.8, 
+            color=Z,  # set color to an array/list of desired values
+            colorscale="Viridis",  # choose a colorscale
+            opacity=0.8,
             showscale=True,
         ),
         name="tf=={tensorflow-version}",
-        text=[f"tf{plot_df['tensorflow'].values[p][1]}" + f"np{plot_df['numpy'].values[p][1]}" for p in range(len(plot_df['tensorflow'].values))],
-        textposition="bottom center"
+        text=[
+            f"tf{plot_df['tensorflow'].values[p][1]}" + f"np{plot_df['numpy'].values[p][1]}"
+            for p in range(len(plot_df["tensorflow"].values))
+        ],
+        textposition="bottom center",
     )
-
 
     data = [trace]
 
@@ -961,23 +952,22 @@ def create_inspection_2d_plot(
                 text=f"tf{plot_df['tensorflow'].values[c][1]}, " + f"np{plot_df['numpy'].values[c][1]}",
                 xanchor="left",
                 xshift=15,
-                opacity=0.7
+                opacity=0.7,
             )
         )
         c += 1
     layout = go.Layout(
-        title = f"PI=Conv2D-tensorflow-{identifiers_inspections}-2Dplot",
-        xaxis = dict(
-            title='Software Stack ID integer encoded'),
-        yaxis = dict(
-            title=_PERFORMANCE_QUANTITY_MAP[quantity]),
+        title=f"PI=Conv2D-tensorflow-{identifiers_inspections}-2Dplot",
+        xaxis=dict(title="Software Stack ID integer encoded"),
+        yaxis=dict(title=_PERFORMANCE_QUANTITY_MAP[quantity]),
         annotations=annotations2,
         showlegend=True,
-        legend=dict(orientation="h")
+        legend=dict(orientation="h"),
     )
     fig = go.Figure(data=data, layout=layout)
 
-    iplot(fig, filename='scatter-colorscale')
+    iplot(fig, filename="scatter-colorscale")
+
 
 def create_inspection_analysis_plots(inspection_df: pd.DataFrame):
     """Create inspection analysis plots for the inspection pd.Dataframe.
