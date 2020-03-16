@@ -632,10 +632,10 @@
         },
         "pandas-profiling": {
             "hashes": [
-                "sha256:e3d286dca878834f14a84e82140f5185d29217d7693a78528481049bbdc67606"
+                "sha256:5d5b5815f483ad7fd9d6a5f9f2c1c34ec2f3d586ee0980acc6f7b2c6e5c08b87"
             ],
             "index": "pypi",
-            "version": "==2.3.0"
+            "version": "==2.5.0"
         },
         "pandocfilters": {
             "hashes": [
