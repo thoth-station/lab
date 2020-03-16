@@ -1,9 +1,12 @@
 import logging
+import sys
 
 from typing import Union, List, Dict, Any
 from thoth.storages import DependencyMonkeyReportsStore
 
 _LOGGER = logging.getLogger(__name__)
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
 
 def aggregate_dm_results_per_identifier(
