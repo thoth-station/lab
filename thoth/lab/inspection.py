@@ -22,6 +22,7 @@ import re
 import os
 import copy
 import hashlib
+import math
 
 import numpy as np
 import pandas as pd
@@ -737,9 +738,14 @@ def create_python_package_df(inspection_df: pd.DataFrame) -> Union[pd.DataFrame,
 
 
 def create_final_dataframe(
-    packages_versions: dict, python_packages_dataframe: pd.DataFrame, df: pd.DataFrame
+    packages_versions: dict, python_packages_dataframe: pd.DataFrame, inspection_df: pd.DataFrame
 ) -> pd.DataFrame:
-    """Create final dataframe with all information required for plots."""
+    """Create final dataframe with all information required for plots.
+
+    :param packages_versions: dict as returned by `create_python_package_df` method.
+    :param python_packages_dataframe: data frame as returned by `create_python_package_df` method.
+    :param inspection_df: data frame containing data of inspections results.
+    """
     label_encoder = LabelEncoder()
 
     processed_string_result = copy.deepcopy(packages_versions)
@@ -752,7 +758,7 @@ def create_final_dataframe(
         sws_encoded.append([row.values, sws_string, hex_dig])
 
     re_encoded = []
-    for index, row in df[
+    for index, row in inspection_df[
         ["os_release__id", "os_release__version_id", "requirements__requires__python_version"]
     ].iterrows():
         re_values = [re for re in row.values]
@@ -847,8 +853,6 @@ def create_inspection_3d_plot(plot_df: pd.DataFrame, quantity: str, identifiers_
     label_encoder = LabelEncoder()
 
     X = [x[0] for x in plot_df[["re_string"]].values]
-    x_values = array(X)
-    integer_x_encoded = label_encoder.fit_transform(x_values)
 
     integer_y_encoded = [y[0] for y in plot_df[["sws_hash_id_encoded"]].values]
 
@@ -913,7 +917,6 @@ def create_inspection_2d_plot(plot_df: pd.DataFrame, quantity: str, identifiers_
 
     :param plot_df dataframe for plot of inspections results
     """
-    label_encoder = LabelEncoder()
     integer_y_encoded = [y[0] for y in plot_df[["sws_hash_id_encoded"]].values]
 
     Z = [z[0] for z in plot_df[[quantity]].values]
@@ -932,10 +935,7 @@ def create_inspection_2d_plot(plot_df: pd.DataFrame, quantity: str, identifiers_
             showscale=True,
         ),
         name="tf=={tensorflow-version}",
-        text=[
-            f"tf{plot_df['tensorflow'].values[p][1]}" + f"np{plot_df['numpy'].values[p][1]}"
-            for p in range(len(plot_df["tensorflow"].values))
-        ],
+        text=[f"tf{plot_df['tensorflow'].values[p][1]}" for p in range(len(plot_df["tensorflow"].values))],
         textposition="bottom center",
     )
 
@@ -1056,25 +1056,34 @@ def evaluate_inspection_statistics(parameters: list, inspection_df_dict: dict) -
     inspection_statistics_dict = {}
 
     for parameter in parameters:
+        IDENTIFIER_INSPECTIONS_REDUCED = []
 
         evaluated_statistics = {}
 
         for identifier in list(inspection_df_dict.keys()):
-            evaluated_statistics[identifier] = evaluate_statistics(
+            result = evaluate_statistics(
                 inspection_df=inspection_df_dict[identifier],
                 inspection_parameter=_INSPECTION_MAPPING_PARAMETERS[parameter],
             )
+            s_parameters = result.keys()
+
+            if any(math.isnan(p) for p in result.values()):
+                print(result)
+                pass
+            else:
+                IDENTIFIER_INSPECTIONS_REDUCED.append(identifier)
+                evaluated_statistics[identifier] = result
 
         aggregated_statistics = {}
 
-        for statistical_quantity in evaluated_statistics[identifier].keys():
+        for statistical_quantity in s_parameters:
             aggregated_statistics[statistical_quantity] = [
                 values[statistical_quantity] for values in evaluated_statistics.values()
             ]
 
         inspection_statistics_dict[parameter] = aggregated_statistics
 
-    return inspection_statistics_dict
+    return inspection_statistics_dict, IDENTIFIER_INSPECTIONS_REDUCED
 
 
 def plot_interpolated_statistics_of_inspection_parameters(
@@ -1254,8 +1263,8 @@ def create_scatter_and_correlation(
 
 def create_plot_multiple_batches(
     data: pd.DataFrame,
+    quantity: str,
     plot_type: str = "box" or "hist",
-    plot_title: str = " ",
     x_label: str = "",
     y_label: str = "",
     static: str = True,
@@ -1264,53 +1273,56 @@ def create_plot_multiple_batches(
     folder_name: str = "",
 ):
     """Create (Histogram or Box) plot using several columns of the dataframe(static as default)."""
+    number_plots = data[quantity].shape[1]
+    logger.info(f"Number of plots created: {number_plots}")
     if not static:
 
         if plot_type == "box":
-            fig = data.iplot(kind="box", theme="white", title=plot_title, xTitle=x_label, yTitle=y_label)
+            fig = data[quantity].iplot(
+                kind="box", theme="white", title=f"{plot_type} for {quantity}", xTitle=x_label, yTitle=y_label
+            )
 
         if plot_type == "hist":
-            fig = data.iplot(kind="histogram", theme="white", title=plot_title, xTitle=x_label, yTitle=y_label)
+            fig = data[quantity].iplot(
+                kind="histogram", theme="white", title=f"{plot_type} for {quantity}", xTitle=x_label, yTitle=y_label
+            )
 
         if save_result:
             logger.warning("Save figure: Not provided for interactive plot yet!!")
         return fig
 
-    if plot_type == "box":
-        px = data.plot(kind="box", title=plot_title)
+    i = 0
+    for column_name in data[quantity].columns.values:
+        plt.figure(i)
+        logger.info(f"Creating {column_name}")
+        px = data[quantity][column_name].plot(kind=plot_type, title=f"Histogram {quantity} for{column_name}")
         px.set_xlabel(x_label)
         px.set_ylabel(y_label)
         px.tick_params(axis="x", rotation=45)
 
-    if plot_type == "hist":
-        px = data.plot(kind="hist", title=plot_title)
-        px.set_xlabel(x_label)
-        px.set_ylabel(y_label)
-        px.tick_params(axis="x", rotation=45)
+        if save_result:
 
-    if save_result:
+            if project_folder != "":
+                current_path = Path.cwd()
+                project_dir_path = current_path.joinpath(project_folder)
 
-        if project_folder != "":
-            current_path = Path.cwd()
-            project_dir_path = current_path.joinpath(project_folder)
+                logger.info("Creating Project folder (if not already created!!)")
+                os.makedirs(project_dir_path, exist_ok=True)
 
-            logger.info("Creating Project folder (if not already created!!)")
-            os.makedirs(project_dir_path, exist_ok=True)
+                if folder_name != "":
+                    new_dir_path = project_dir_path.joinpath(folder_name)
+                    logger.info("Creating sub-folder (if not already created!!)")
+                    os.makedirs(new_dir_path, exist_ok=True)
+                    fig = px.get_figure()
+                    fig.savefig(f"{new_dir_path}/{plot_type}_{quantity}_{column_name}_static.png", bbox_inches="tight")
 
-            if folder_name != "":
-                new_dir_path = project_dir_path.joinpath(folder_name)
-                logger.info("Creating sub-folder (if not already created!!)")
-                os.makedirs(new_dir_path, exist_ok=True)
-                fig = px.get_figure()
-                fig.savefig(f"{new_dir_path}/{plot_title}_static.png", bbox_inches="tight")
+                else:
+                    fig = px.get_figure()
+                    fig.savefig(f"{new_dir_path}/{plot_type}_{quantity}_{column_name}_static.png", bbox_inches="tight")
+        plt.close()
+        i += 1
 
-            else:
-                fig = px.get_figure()
-                fig.savefig(f"{project_dir_path}/{plot_title}_static.png", bbox_inches="tight")
-        else:
-            logger.warning("No project folder name provided!!")
-
-    return px
+    return
 
 
 def create_plot_from_df(
@@ -1323,6 +1335,7 @@ def create_plot_from_df(
     save_result: bool = False,
     project_folder: str = "",
     folder_name: str = "",
+    scatter: bool = False,
 ):
     """Create plot using two columns of the DataFrame."""
     columns = columns if columns is not None else data[columns].columns
@@ -1331,21 +1344,28 @@ def create_plot_from_df(
 
     if not static:
 
-        fig = py.iplot(
-            {
-                "data": [{"x": data[columns[0]], "y": data[columns[1]], "mode": "lines+markers"}],
-                "layout": {"title": title_plot, "xaxis": {"title": x_label}, "yaxis": {"title": y_label}},
-            }
-        )
+        mode = "lines+markers"
+
+        if scatter:
+            mode = "markers"
+
+        fig = {
+            "data": [{"x": data[columns[0]], "y": data[columns[1]], "mode": mode}],
+            "layout": {"title": title_plot, "xaxis": {"title": x_label}, "yaxis": {"title": y_label}},
+        }
+        iplot(fig)
 
         if save_result:
             logger.warning("Save figure: Not provided for interactive plot yet!!")
         return fig
 
-    px = data[columns].plot(x=columns[0], title=title_plot)
+    if scatter:
+        px = data[columns].plot(x=columns[0], y=columns[1], title=title_plot, kind="scatter")
+    else:
+        px = data[columns].plot(x=columns[0], title=title_plot)
     px.set_xlabel(x_label)
     px.set_ylabel(y_label)
-    px.tick_params(axis="x", rotation=45)
+    px.tick_params(axis="x")
 
     if save_result:
 
@@ -1370,9 +1390,9 @@ def create_plot_from_df(
             logger.warning("No project folder name provided!!")
 
 
-def create_violin_plot(
+def create_multiple_violin_plot(
     data: pd.DataFrame,
-    plot_title: str = " ",
+    quantity: str,
     x_label: str = "",
     y_label: str = "",
     save_result: bool = False,
@@ -1381,35 +1401,46 @@ def create_violin_plot(
     linewidth: int = 1,
 ):
     """Create violin plot."""
-    ax = sns.violinplot(data=data, linewidth=linewidth)
-    ax.tick_params(axis="x", rotation=45)
-    ax.set(xlabel=x_label, ylabel=y_label, title=plot_title)
+    i = 0
+    for column_name in data[quantity].columns.values:
+        plt.figure(i)
+        logger.info(f"Creating {column_name}")
+        ax = sns.violinplot(data=data[quantity][column_name], linewidth=linewidth)
+        ax.tick_params(axis="x")
+        ax.set(xlabel=x_label, ylabel=y_label, title=f"Violin plot {quantity} for{column_name}")
 
-    if save_result:
+        if save_result:
 
-        if project_folder != "":
-            current_path = Path.cwd()
-            project_dir_path = current_path.joinpath(project_folder)
+            if project_folder != "":
+                current_path = Path.cwd()
+                project_dir_path = current_path.joinpath(project_folder)
 
-            logger.info("Creating Project folder (if not already created!!)")
-            os.makedirs(project_dir_path, exist_ok=True)
+                logger.info("Creating Project folder (if not already created!!)")
+                os.makedirs(project_dir_path, exist_ok=True)
 
-            if folder_name != "":
-                new_dir_path = project_dir_path.joinpath(folder_name)
-                logger.info("Creating sub-folder (if not already created!!)")
-                os.makedirs(new_dir_path, exist_ok=True)
-                fig = ax.get_figure()
-                fig.savefig(f"{new_dir_path}/{plot_title}_static.png", bbox_inches="tight")
+                if folder_name != "":
+                    new_dir_path = project_dir_path.joinpath(folder_name)
+                    logger.info("Creating sub-folder (if not already created!!)")
+                    os.makedirs(new_dir_path, exist_ok=True)
+                    fig = ax.get_figure()
+                    fig.savefig(f"{new_dir_path}/Violin_plot_{quantity}_{column_name}_static.png", bbox_inches="tight")
+
+                else:
+                    fig = ax.get_figure()
+                    fig.savefig(
+                        f"{project_dir_path}/Violin_plot_{quantity}_{column_name}_static.png", bbox_inches="tight"
+                    )
 
             else:
-                fig = ax.get_figure()
-                fig.savefig(f"{project_dir_path}/{plot_title}_static.png", bbox_inches="tight")
-        else:
-            logger.warning("No project folder name provided!!")
+                logger.warning("No project folder name provided!!")
+
+    plt.close()
+    i += 1
 
 
-def columns_to_analyze(df: pd.DataFrame, low=0, high=len(df_original),
-                       display_clusters=False, cluster_by_hue=False) -> pd.DataFrame:
+def columns_to_analyze(
+    df: pd.DataFrame, low=0, high=len(df_original), display_clusters=False, cluster_by_hue=False
+) -> pd.DataFrame:
     """Print all columns within dataframe and count of unique column values within limit.
 
     :param df: data frame to analyze as returned by `process_inspection_results'
@@ -1425,20 +1456,20 @@ def columns_to_analyze(df: pd.DataFrame, low=0, high=len(df_original),
     for i in df:
         try:
             value_count = len(df.groupby(i).count())
-            if ((value_count >= low) and (value_count <= high)):
+            if (value_count >= low) and (value_count <= high):
                 print(i, value_count)
                 lst_columns_to_analyze.append(i)
         except TypeError:
             # Groups every column by unique values if values are in list or dict formats
             try:
                 value_count = len(pd.Series(df[i].values).apply(tuple).unique())
-                if ((value_count >= low) and (value_count <= high)):
+                if (value_count >= low) and (value_count <= high):
                     print(i, value_count)
                     lst_columns_to_analyze.append(i)
             except TypeError:
-                lst_new = (list(df[i].values))
-                value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1:]])
-                if ((value_count >= low) and (value_count <= high)):
+                lst_new = list(df[i].values)
+                value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1 :]])
+                if (value_count >= low) and (value_count <= high):
                     print(i, value_count)
                     lst_columns_to_analyze.append(i)
                 pass
@@ -1453,7 +1484,7 @@ def columns_to_analyze(df: pd.DataFrame, low=0, high=len(df_original),
         except TypeError:
             pass
     if cluster_by_hue is True:
-        if ((low > 0) and (high < 100)):
+        if (low > 0) and (high < 100):
             printmd("#### Distribution of parameters to analyze organized by hues")
             plot_subcategories_by_hues(df_analyze, df, "status__job__duration")
         else:
@@ -1475,9 +1506,9 @@ def display_jobs_by_subcategories(df: pd.DataFrame):
         df = df.reset_index()
         for i in df.columns:
             created_values = inspection.query_inspection_dataframe(df, groupby=i)
-            if not i == 'index':
+            if not i == "index":
                 df_inspection_id = created_values.groupby([i]).count()
-                df_inspection_id = df_inspection_id.filter(['index', i])
+                df_inspection_id = df_inspection_id.filter(["index", i])
                 lst.append(df_inspection_id)
         return lst
     except ValueError:
@@ -1505,19 +1536,18 @@ def duration_plots(df: pd.DataFrame):
     df = df.sort_values(by=["created"])
 
     # Plot job__duration from inspection results
-    s_plot = df.plot.scatter(x='status__job__duration', y='index', c='DarkBlue',
-                             title='Job Duration', ax=ax1)
+    s_plot = df.plot.scatter(x="status__job__duration", y="index", c="DarkBlue", title="Job Duration", ax=ax1)
     s_plot.set_xlabel("status__job__duration [ms]")
 
     # Plot build__duration from inspection results
-    s_plot = df.plot.scatter(x='status__build__duration', y='index', c='DarkBlue',
-                             title='Build Duration', ax=ax2)
+    s_plot = df.plot.scatter(x="status__build__duration", y="index", c="DarkBlue", title="Build Duration", ax=ax2)
     s_plot.set_xlabel("status__job__duration [ms]")
 
     # Plot elapsed time from inspection results
-    df["job_log__stdout__@result__elapsed"] = df["job_log__stdout__@result__elapsed"]/1000
-    s_plot = df.plot.scatter(x='job_log__stdout__@result__elapsed', y='index', c='DarkBlue',
-                             title='Elapsed Duration', ax=ax3)
+    df["job_log__stdout__@result__elapsed"] = df["job_log__stdout__@result__elapsed"] / 1000
+    s_plot = df.plot.scatter(
+        x="job_log__stdout__@result__elapsed", y="index", c="DarkBlue", title="Elapsed Duration", ax=ax3
+    )
     s_plot.set_xlabel("elapsed [ms]")
 
     # Plot lag plot of job duration sorted by the start of job
@@ -1546,7 +1576,7 @@ def plot_subcategories_by_hues(df_cat: pd.DataFrame, df: pd.DataFrame, column):
     df = df.reset_index()
     for i in df_cat:
         g = sns.FacetGrid(df, hue=i, margin_titles=True, height=5, aspect=1)
-        g.map(sns.regplot, column, "index", fit_reg=False, x_jitter=.1,  scatter_kws=dict(alpha=0.5))
+        g.map(sns.regplot, column, "index", fit_reg=False, x_jitter=0.1, scatter_kws=dict(alpha=0.5))
         g.add_legend()
 
 
@@ -1562,7 +1592,7 @@ def concatenated_df(lst_of_df: list, column: string):
         df_grouping_category = i.groupby([column]).count()
         col_one = df_grouping_category["index"]
         df_col_one = pd.DataFrame(col_one)
-        df_col_one = df_col_one.rename(index=str, columns={"index": "Total jobs:"+"{}".format(len(i))})
+        df_col_one = df_col_one.rename(index=str, columns={"index": "Total jobs:" + "{}".format(len(i))})
         lst_processed.append(df_col_one)
 
     df_final = pd.concat([i for i in lst_processed], axis=1)
@@ -1577,16 +1607,16 @@ def summary_trace_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst=[]):
     :param lst: dataframes of clustered data (if any) appended to dataframe of
     entire dataset (ie: [df_left_cluster, df_right_cluster, df_duration])
     """
-    fig = plt.figure(figsize=(15, len(df_categories.columns)*4))
+    fig = plt.figure(figsize=(15, len(df_categories.columns) * 4))
     lst_df = []
     for i in df_categories.columns:
         lst_df.append((concatenated_df(lst, i)))
     lst_to_analyze = df_categories.columns
     count = 0
     for i in range(len(df_categories.columns)):
-        ax = fig.add_subplot(len(df_categories.columns), 1, i+1)
-        lst_df[count].apply(lambda x: x/x.sum()).transpose().plot(kind='bar', stacked=True, ax=ax, sharex=ax)
-        ax.legend(title=lst_to_analyze[count], loc=9, bbox_to_anchor=(1.3, 0.7), fontsize='small', fancybox=True)
+        ax = fig.add_subplot(len(df_categories.columns), 1, i + 1)
+        lst_df[count].apply(lambda x: x / x.sum()).transpose().plot(kind="bar", stacked=True, ax=ax, sharex=ax)
+        ax.legend(title=lst_to_analyze[count], loc=9, bbox_to_anchor=(1.3, 0.7), fontsize="small", fancybox=True)
         count += 1
 
 
@@ -1597,7 +1627,7 @@ def summary_bar_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst_of_clust
     :param df_categories:  filtered dataframe with columns to analyze as returned by columns_to_analyze
     :param lst_of_clusters: list of subset dataframes with the last value in list being the entire data set
     """
-    fig = plt.figure(figsize=(15, len(df_categories.columns)*7))
+    fig = plt.figure(figsize=(15, len(df_categories.columns) * 7))
     lst_df = []  # list of dataframes, dataframe for each cluster
 
     for i in df_categories.columns:
@@ -1606,36 +1636,40 @@ def summary_bar_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst_of_clust
     lst_to_analyze = df_categories.columns
     count = 0
 
-    for i in (lst_df):
-        ax = fig.add_subplot(len(df_categories.columns), 1, count+1)
+    for i in lst_df:
+        ax = fig.add_subplot(len(df_categories.columns), 1, count + 1)
         ax.set_title(lst_to_analyze[count])
         colors = ["#addd8e", "#fdd0a2", "#a6bddb", "#7fcdbb"]
 
-        if (len(lst_of_clusters) > 1):
+        if len(lst_of_clusters) > 1:
             lst_cluster = []
-            for j in range(len(lst_of_clusters)-1):
-                lst_cluster.append('Total jobs:{}'.format(len(lst_of_clusters[j])))
-            g = lst_df[count].loc[:, lst_cluster].plot(align='edge', kind="barh", stacked=True,
-                                                       color=colors, width=.6, ax=ax)
+            for j in range(len(lst_of_clusters) - 1):
+                lst_cluster.append("Total jobs:{}".format(len(lst_of_clusters[j])))
+            g = (
+                lst_df[count]
+                .loc[:, lst_cluster]
+                .plot(align="edge", kind="barh", stacked=True, color=colors, width=0.6, ax=ax)
+            )
 
-        g = lst_df[count].loc[:, ['Total jobs:{}'.format(len(lst_of_clusters[-1]))]].plot(align='edge',
-                                                                                          kind="barh",
-                                                                                          stacked=False,
-                                                                                          color="#7fcdbb",
-                                                                                          width=.3, ax=ax)
-        g.legend(loc=9, bbox_to_anchor=(1.3, 0.7), fontsize='small', fancybox=True)
+        g = (
+            lst_df[count]
+            .loc[:, ["Total jobs:{}".format(len(lst_of_clusters[-1]))]]
+            .plot(align="edge", kind="barh", stacked=False, color="#7fcdbb", width=0.3, ax=ax)
+        )
+        g.legend(loc=9, bbox_to_anchor=(1.3, 0.7), fontsize="small", fancybox=True)
         x_offset = 1
-        y_offset = -.2
+        y_offset = -0.2
         for p in g.patches:
             b = p.get_bbox()
             val = "{0:g}".format(b.x1 - b.x0)
-            if (val != '0'):
+            if val != "0":
                 g.annotate(val, ((b.x1) + x_offset, b.y1 + y_offset))
         count += 1
 
 
-def plot_distribution_of_jobs_combined_categories(df_hardware_category: pd.DataFrame, df_duration: pd.DataFrame,
-                                                  df_analyze: pd.DataFrame):
+def plot_distribution_of_jobs_combined_categories(
+    df_hardware_category: pd.DataFrame, df_duration: pd.DataFrame, df_analyze: pd.DataFrame
+):
     """
     Plot the job duration distribution for each unique hardware combination/configuration of data.
 
@@ -1646,16 +1680,16 @@ def plot_distribution_of_jobs_combined_categories(df_hardware_category: pd.DataF
     list_df_combinations = []
     for i in range(len(df_hardware_category)):
         ll = []
-        for j in range(len(df_hardware_category.columns)-1):
+        for j in range(len(df_hardware_category.columns) - 1):
             ll.append((df_analyze[df_hardware_category.columns[j]] == df_hardware_category.iloc[i, j]))
         df_new = df_duration[np.logical_and.reduce(ll)]
 
         list_df_combinations.append(df_new)
 
-    fig = plt.figure(figsize=(5, 4*len(df_hardware_category)))
+    fig = plt.figure(figsize=(5, 4 * len(df_hardware_category)))
     fig.subplots_adjust(hspace=0.7, wspace=0.7)
     for i in range(len(df_hardware_category)):
-        plt.subplot(len(df_hardware_category), 1, i+1)
+        plt.subplot(len(df_hardware_category), 1, i + 1)
         g = sns.distplot(list_df_combinations[i]["status__job__duration"], kde=True)
         g.set_title(str(df_hardware_category.loc[i]), fontsize=6)
 
@@ -1669,28 +1703,35 @@ def map_column_to_feature_class(column_name):
     # The keys are keywords to help associate each column with the corresponding feature class.
     software_keys = ["specification__files", "specification__packages", "specification__python__requirements"]
     script_keys = ["job_log__script", "job_log__stderr", "job_log__stdout", "specification__script"]
-    hardware_keys = ["hwinfo__cpu", "platform__architecture", "platform__machine", "platform__platform",
-                     "platform__processor", "platform__release", "platform__version"]
-    if (any(x in column_name for x in hardware_keys)):
-        return ("Hardware (ncpus + Platform + Processor)")
-    elif(any(x in column_name for x in software_keys)):
-        return ("Software stack (files, python packages, python requirements)")
-    elif("specification__base" in column_name):
-        return ("Base image")
-    elif(any(x in column_name for x in script_keys)):
-        return ("Script (script + sha256 + parameters)")
-    elif("build__requests" in column_name):
-        return ("Build request (hardware + memory)")
-    elif("run__requests" in column_name):
-        return ("Run request (hardware + memory)")
-    elif("build__exit_code" in column_name):
-        return ("Failure build (exit_code)")
-    elif("job__exit_code" in column_name):
-        return ("Failure run/job (exit_code)")
-    elif("job_log__exit_code" in column_name):
-        return ("Job Log (exit_code)")
+    hardware_keys = [
+        "hwinfo__cpu",
+        "platform__architecture",
+        "platform__machine",
+        "platform__platform",
+        "platform__processor",
+        "platform__release",
+        "platform__version",
+    ]
+    if any(x in column_name for x in hardware_keys):
+        return "Hardware (ncpus + Platform + Processor)"
+    elif any(x in column_name for x in software_keys):
+        return "Software stack (files, python packages, python requirements)"
+    elif "specification__base" in column_name:
+        return "Base image"
+    elif any(x in column_name for x in script_keys):
+        return "Script (script + sha256 + parameters)"
+    elif "build__requests" in column_name:
+        return "Build request (hardware + memory)"
+    elif "run__requests" in column_name:
+        return "Run request (hardware + memory)"
+    elif "build__exit_code" in column_name:
+        return "Failure build (exit_code)"
+    elif "job__exit_code" in column_name:
+        return "Failure run/job (exit_code)"
+    elif "job_log__exit_code" in column_name:
+        return "Job Log (exit_code)"
     else:
-        return ("Inspection Result Info")
+        return "Inspection Result Info"
 
 
 def process_empty_or_mutable_parameters(df: pd.DataFrame):
@@ -1709,7 +1750,7 @@ def process_empty_or_mutable_parameters(df: pd.DataFrame):
             value_count = len(df.groupby(i).count())
 
             # Columns with no data
-            if (value_count == 0):
+            if value_count == 0:
                 print(i, value_count)
                 list_of_unhashable_none_values.append(i)
         except TypeError:
@@ -1721,8 +1762,8 @@ def process_empty_or_mutable_parameters(df: pd.DataFrame):
                 print(i, value_count)
             except TypeError:
                 # If values are type dict checks uniqueness
-                lst_new = (list(df[i].values))
-                value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1:]])
+                lst_new = list(df[i].values)
+                value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1 :]])
                 list_of_unhashable_none_values.append(i)
                 print(i, value_count)
     return df.drop(list_of_unhashable_none_values, axis=1)
@@ -1751,7 +1792,7 @@ def unique_value_count_by_feature_class(df: pd.DataFrame):
         # Get a list of parameters that fall within the class
         list_of_parameters_per_feature = []
         for k in dict_to_feature_class:
-            if (j == dict_to_feature_class[k]):
+            if j == dict_to_feature_class[k]:
                 list_of_parameters_per_feature.append(k)
 
         # Groupby to get unique value count for feature class
@@ -1784,7 +1825,7 @@ def dataframe_statistics(df: pd.DataFrame, plot_title):
     printmd("#### Duration statistics")
     df_stats = pd.DataFrame((df["status__job__duration"].describe()))
     df_stats["status__build__duration"] = df["status__build__duration"].describe()
-    df_stats["job_log__stdout__@result__elapsed"] = (df["job_log__stdout__@result__elapsed"]/1000).describe()
+    df_stats["job_log__stdout__@result__elapsed"] = (df["job_log__stdout__@result__elapsed"] / 1000).describe()
     display(df_stats)
 
     # Plotting of job duration and build duration with fit
