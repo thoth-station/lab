@@ -297,11 +297,11 @@
         },
         "jupyter-require": {
             "hashes": [
-                "sha256:753c5338b63db4177e9132741765492c99f923ddc597f5d60747895d7449ae79",
-                "sha256:d4b9881148c8be87323eed05b4aa90ee727ded886ce6ec399d5cc3124a739279"
+                "sha256:5473bbd3d0ca6e6bcc606281bcaaf7c57c51c2c2bf696c32d451066cb44c1301",
+                "sha256:c1aa042e2c17a2f45978abab74e96a7e0474f44dd138678cc177a0ee281dcc00"
             ],
             "index": "pypi",
-            "version": "==0.4.2"
+            "version": "==0.6.1"
         },
         "kaggle": {
             "hashes": [
