@@ -114,10 +114,10 @@
         },
         "cufflinks": {
             "hashes": [
-                "sha256:a30724ff73fa83c80c29c701b0d6426aea562d8aed97f49d3cc9c209eadb8ac7"
+                "sha256:48c1b3406dc030004121966489eebc5518cea70fd4e3f16379b491328501a644"
             ],
             "index": "pypi",
-            "version": "==0.17.0"
+            "version": "==0.17.3"
         },
         "cycler": {
             "hashes": [
