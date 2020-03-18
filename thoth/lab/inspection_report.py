@@ -24,6 +24,7 @@ import pandas as pd
 from typing import Any, Dict, List, Tuple, Union
 from thoth.lab import inspection
 from thoth.lab import underscore
+from thoth.lab.exception import NotUniqueValues
 
 from IPython.core.display import HTML
 
@@ -50,13 +51,13 @@ _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING = {
 
 
 def multi_table(table_dict):
-    ''' Acceps a list of IpyTable objects and returns a table which contains each IpyTable in a cell
-    '''
+    """Accept a list of IpyTable objects and return a table which contains each IpyTable in a cell."""
     return HTML(
-        '<table><br style="background-color:white;">' + 
-        ''.join(['<br>' + table._repr_html_() + '</br>' for table in table_dict.values()]) +
-        '</br></table>'
+        '<table><br style="background-color:white;">'
+        + "".join(["<br>" + table._repr_html_() + "</br>" for table in table_dict.values()])
+        + "</br></table>"
     )
+
 
 def create_df_report(df: pd.DataFrame) -> pd.DataFrame:
     """Show unique values for each column in the dataframe."""
@@ -64,13 +65,14 @@ def create_df_report(df: pd.DataFrame) -> pd.DataFrame:
     for c_name in df.columns.values:
         try:
             unique_values = df[c_name].unique()
-            dataframe_report[c_name] = [unique_values] 
-        except Exception as e:
-            logger.info(e)
+            dataframe_report[c_name] = [unique_values]
+        except NotUniqueValues as exc:
+            logger.info(exc)
             dataframe_report[c_name] = [df[c_name].values]
             pass
     df_unique = pd.DataFrame(dataframe_report)
     return df_unique
+
 
 def create_dfs_inspection_classes(df: pd.DataFrame) -> dict:
     """Create all inspection dataframes per class with unique values and complete values."""
@@ -87,32 +89,51 @@ def create_dfs_inspection_classes(df: pd.DataFrame) -> dict:
             for feature in class_features:
 
                 if len(feature) > 1:
-                    class_df = df[[col for col in df.columns.values if any(c in col for c in _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[feature])]]
-                    class_inspection_dfs[class_inspection][feature] = class_df
-
-                    class_df_unique = create_df_report(class_df)
-                    class_inspection_dfs_unique[class_inspection][feature] = class_df_unique       
-                else:
-                    class_df = df[[col for col in df.columns.values if _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[feature] in col]]
+                    class_df = df[
+                        [
+                            col
+                            for col in df.columns.values
+                            if any(c in col for c in _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[feature])
+                        ]
+                    ]
                     class_inspection_dfs[class_inspection][feature] = class_df
 
                     class_df_unique = create_df_report(class_df)
                     class_inspection_dfs_unique[class_inspection][feature] = class_df_unique
+                else:
+                    class_df = df[
+                        [col for col in df.columns.values if _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[feature] in col]
+                    ]
+                    class_inspection_dfs[class_inspection][feature] = class_df
+
+                    class_df_unique = create_df_report(class_df)
+                    class_inspection_dfs_unique[class_inspection][feature] = class_df_unique
+
+        elif len(_INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[class_features[0]]) > 1:
+
+            class_df = df[
+                [
+                    col
+                    for col in df.columns.values
+                    if any(c in col for c in _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[class_features[0]])
+                ]
+            ]
+            class_inspection_dfs[class_inspection] = class_df
+
+            class_df_unique = create_df_report(class_df)
+            class_inspection_dfs_unique[class_inspection] = class_df_unique
+
         else:
-            if len(_INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[class_features[0]]) > 1:
+            class_df = df[
+                [
+                    col
+                    for col in df.columns.values
+                    if _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[class_features[0]][0] in col
+                ]
+            ]
+            class_inspection_dfs[class_inspection] = class_df
 
-                class_df = df[[col for col in df.columns.values if any(c in col for c in _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[class_features[0]])]]
-                class_inspection_dfs[class_inspection] = class_df
-
-                class_df_unique = create_df_report(class_df)
-                class_inspection_dfs_unique[class_inspection] = class_df_unique
-
-            else:
-                class_df = df[[col for col in df.columns.values if _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[class_features[0]][0] in col]]
-                class_inspection_dfs[class_inspection] = class_df
-
-                class_df_unique = create_df_report(class_df)
-                class_inspection_dfs_unique[class_inspection] = class_df_unique
+            class_df_unique = create_df_report(class_df)
+            class_inspection_dfs_unique[class_inspection] = class_df_unique
 
     return class_inspection_dfs, class_inspection_dfs_unique
-

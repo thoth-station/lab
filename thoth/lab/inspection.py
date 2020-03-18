@@ -34,6 +34,11 @@ import cufflinks as cf
 import plotly
 import plotly.offline as py
 
+import matplotlib
+import matplotlib.pyplot as plt
+
+import seaborn as sns
+
 from pandas_profiling import ProfileReport as profile
 from pandas.io.json import json_normalize
 
@@ -51,11 +56,7 @@ from plotly import graph_objs as go
 from plotly import figure_factory as ff
 from plotly import tools
 from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
-
-import matplotlib
-import matplotlib.pyplot as plt
-
-import seaborn as sns
+from IPython.display import display
 
 from thoth.storages import InspectionResultsStore
 from thoth.lab.utils import group_index
@@ -895,9 +896,11 @@ def create_inspection_3d_plot(plot_df: pd.DataFrame, quantity: str, identifiers_
         )
         c += 1
 
+    margin = {"l": 0, "r": 0, "b": 0, "t": 0}
+
     layout = go.Layout(
         title="PI=Conv2D",
-        margin=dict(l=0, r=0, b=0, t=0),
+        margin=margin,
         scene=dict(
             xaxis=dict(title="Runtime Environment"),
             yaxis=dict(title="Software Stack ID integer encoded"),
@@ -1452,7 +1455,7 @@ def columns_to_analyze(
     lst_columns_to_analyze = []
 
     # Groups every column by unique values
-    printmd("#### Columns to analyze, Unique Value Count")
+    logger.info("#### Columns to analyze, Unique Value Count")
     for i in df:
         try:
             value_count = len(df.groupby(i).count())
@@ -1468,7 +1471,7 @@ def columns_to_analyze(
                     lst_columns_to_analyze.append(i)
             except TypeError:
                 lst_new = list(df[i].values)
-                value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1 :]])
+                value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1:]])
                 if (value_count >= low) and (value_count <= high):
                     print(i, value_count)
                     lst_columns_to_analyze.append(i)
@@ -1477,7 +1480,7 @@ def columns_to_analyze(
     # Filters data frame to columns with distinct value counts within the limit
     df_analyze = df[lst_columns_to_analyze]
     if display_clusters is True:
-        printmd("#### Inspection result count organized by parameter + parameter values")
+        logger.info("#### Inspection result count organized by parameter + parameter values")
         try:
             for i in display_jobs_by_subcategories(df_analyze):
                 display(i)
@@ -1485,10 +1488,10 @@ def columns_to_analyze(
             pass
     if cluster_by_hue is True:
         if (low > 0) and (high < 100):
-            printmd("#### Distribution of parameters to analyze organized by hues")
+            logger.info("#### Distribution of parameters to analyze organized by hues")
             plot_subcategories_by_hues(df_analyze, df, "status__job__duration")
         else:
-            printmd("##### Parameter variance too large to plot by hue/color")
+            logger.info("##### Parameter variance too large to plot by hue/color")
 
     # In addition to printing, function returns dataframe with results that fall within the limits
 
@@ -1679,10 +1682,10 @@ def plot_distribution_of_jobs_combined_categories(
     """
     list_df_combinations = []
     for i in range(len(df_hardware_category)):
-        ll = []
+        values = []
         for j in range(len(df_hardware_category.columns) - 1):
-            ll.append((df_analyze[df_hardware_category.columns[j]] == df_hardware_category.iloc[i, j]))
-        df_new = df_duration[np.logical_and.reduce(ll)]
+            values.append((df_analyze[df_hardware_category.columns[j]] == df_hardware_category.iloc[i, j]))
+        df_new = df_duration[np.logical_and.reduce(values)]
 
         list_df_combinations.append(df_new)
 
@@ -1695,10 +1698,11 @@ def plot_distribution_of_jobs_combined_categories(
 
 
 # Function takes in a column and prints out the feature class
-def map_column_to_feature_class(column_name):
+def map_column_to_feature_class(column_name: str):
     """Helper function that maps a column in the original dataframe to a feature class.
 
-    :param df: data frame returned by process_inspection_results with no columns dropped (drop=False)
+    :param column_name: column_name in inspection_df dataframe
+    obtained by process_inspection_results with no columns dropped (drop=False)
     """
     # The keys are keywords to help associate each column with the corresponding feature class.
     software_keys = ["specification__files", "specification__packages", "specification__python__requirements"]
@@ -1734,20 +1738,21 @@ def map_column_to_feature_class(column_name):
         return "Inspection Result Info"
 
 
-def process_empty_or_mutable_parameters(df: pd.DataFrame):
-    """Print all columns with values of type dictionary/list.
+def process_empty_or_mutable_parameters(inspection_df: pd.DataFrame):
+    """Process empty or mutable parameters in dataframe.
 
     These values will not work with further processing using the groupby function. Prints the unique
     value count of all columns that are unhashable (all such columns are constant). Drops these
     columns and returns a new dataframe.
 
-    :param df: data frame as returned by process_inspection_results with no columns dropped (drop=False)
+    :param inspection_df: data frame as returned by `process_inspection_results`
+    with no columns dropped (drop=False)
     """
     # This is a list to populate with columns with no data or columns with unhashable data.
     list_of_unhashable_none_values = []
-    for i in df:
+    for i in inspection_df:
         try:
-            value_count = len(df.groupby(i).count())
+            value_count = len(inspection_df.groupby(i).count())
 
             # Columns with no data
             if value_count == 0:
@@ -1757,30 +1762,30 @@ def process_empty_or_mutable_parameters(df: pd.DataFrame):
             # Groups every column by unique values if values are in list or dict formats
             try:
                 # If values are type list checks uniqueness
-                value_count = len(pd.Series(df[i].values).apply(tuple).unique())
+                value_count = len(pd.Series(inspection_df[i].values).apply(tuple).unique())
                 list_of_unhashable_none_values.append(i)
                 print(i, value_count)
             except TypeError:
                 # If values are type dict checks uniqueness
-                lst_new = list(df[i].values)
-                value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1 :]])
+                lst_new = list(inspection_df[i].values)
+                value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1:]])
                 list_of_unhashable_none_values.append(i)
                 print(i, value_count)
-    return df.drop(list_of_unhashable_none_values, axis=1)
+    return inspection_df.drop(list_of_unhashable_none_values, axis=1)
 
 
-def unique_value_count_by_feature_class(df: pd.DataFrame):
-    """Print unique count values per feature/class.
+def show_unique_value_count_by_feature_class(processed_df: pd.DataFrame):
+    """Show unique count values per feature/class.
 
-    Print results per feature/class that are subdivided in subclasses that map to it.
+    Show results per feature/class that are subdivided in subclasses that map to it.
 
-    :param df: processed dataframe as returned by the process_empty_or_mutable_parameters
+    :param processed_df: processed dataframe as returned by the process_empty_or_mutable_parameters
     """
     dict_to_feature_class = {}
     list_of_features = []
 
     # Iterate through dataframe and create a dictionary of dataframe column: feature class key value pairs.
-    for i in df:
+    for i in processed_df:
         dict_to_feature_class[i] = map_column_to_feature_class(i)
         list_of_features.append(map_column_to_feature_class(i))
 
@@ -1797,53 +1802,48 @@ def unique_value_count_by_feature_class(df: pd.DataFrame):
 
         # Groupby to get unique value count for feature class
         try:
-            group = df.groupby(list_of_parameters_per_feature).size()
-            printmd("#### {} {}".format(j, len(group)))
+            group = processed_df.groupby(list_of_parameters_per_feature).size()
+            logger.info("#### {} {}".format(j, len(group)))
 
             # Groupby to get unique value count for each dataframe column
             for l in list_of_parameters_per_feature:
-                print(l, len(df.groupby(l).size()))
+                logger.info(l, len(processed_df.groupby(l).size()))
 
         except (TypeError, ValueError) as e:
-            print("Parameter does not have any values. Filter these out first")
+            logger.warning(e)
+            logger.warning("Parameter does not have any values. Filter these out first")
 
 
-def dataframe_statistics(df: pd.DataFrame, plot_title):
+def dataframe_statistics(inspection_df: pd.DataFrame, plot_title: str):
     """Output a data frame with relevant statistics on job duration, build duration and time elapsed.
 
-    :param df: data frame to analyze as returned by `process_inspection_results' with duration values in ms
+    :param inspection_df: data frame to analyze as returned by `process_inspection_results' (duration [ms])
     :param plot_title: title of fit plot
     """
-    # Measure of skew and kurtosis for job and build duration    printmd("## Duration Statistics")
-    printmd("#### Skew and kurtosis statistics")
-    print("Job Duration Skew:", df["status__job__duration"].skew(axis=0, skipna=True))
-    print("Build Duration Skew:", df["status__build__duration"].skew(axis=0, skipna=True))
-    print("Job Duration Kurtosis", (df["status__job__duration"].kurt(axis=0, skipna=True)))
-    print("Build Duration Kurtosis", (df["status__build__duration"].kurt(axis=0, skipna=True)))
+    # Measure of skew and kurtosis for job and build duration
+    logger.info("#### Skew and kurtosis statistics")
+    logger.info(f"Job Duration Skew: {inspection_df['status__job__duration'].skew(axis=0, skipna=True)}")
+    logger.info(f"Build Duration Skew:: {inspection_df['status__build__duration'].skew(axis=0, skipna=True)}")
+    logger.info(f"Job Duration Kurtosis: {inspection_df['status__job__duration'].kurt(axis=0, skipna=True)}")
+    logger.info(f"Build Duration Kurtosis: {inspection_df['status__build__duration'].kurt(axis=0, skipna=True)}")
 
     # Statistics for job duration, build duration, and elapsed time
-    printmd("#### Duration statistics")
-    df_stats = pd.DataFrame((df["status__job__duration"].describe()))
-    df_stats["status__build__duration"] = df["status__build__duration"].describe()
-    df_stats["job_log__stdout__@result__elapsed"] = (df["job_log__stdout__@result__elapsed"] / 1000).describe()
+    logger.info("#### Duration statistics")
+    df_stats = pd.DataFrame((inspection_df["status__job__duration"].describe()))
+    df_stats["status__build__duration"] = inspection_df["status__build__duration"].describe()
+    df_stats["job_log__stdout__@result__elapsed"] = (
+        inspection_df["job_log__stdout__@result__elapsed"] / 1000
+    ).describe()
     display(df_stats)
 
     # Plotting of job duration and build duration with fit
-    g = sns.distplot(df["status__job__duration"], kde=True)
+    g = sns.distplot(inspection_df["status__job__duration"], kde=True)
     g.set_title("Job Duration: {}".format(plot_title))
-    printmd("#### Job and build distribution plots, scatter plots, autocorrelation plots")
+    logger.info("#### Job and build distribution plots, scatter plots, autocorrelation plots")
     plt.figure()
-    g2 = sns.distplot(df["status__build__duration"], kde=True)
+    g2 = sns.distplot(inspection_df["status__build__duration"], kde=True)
     g2.set_title("Build Duration: {}".format(plot_title))
 
     plt.figure()
 
-    duration_plots(df_duration)
-
-
-def printmd(string):
-    """Alternate print function implementing markdown formatting.
-
-    :param string: string to print
-    """
-    display(Markdown(string))
+    duration_plots(df_stats)
