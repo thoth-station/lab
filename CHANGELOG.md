@@ -412,3 +412,22 @@
 * State only direct dependencies in requirements.txt
 * Create initial dependencies.yml config
 * Initial project import
+
+## Release 0.1.5 (2020-03-20T14:30:15)
+* Add exception file and adjust little details
+* Adjust multi plot for scalability
+* update Pipefile and Pipfile.lock
+* Adjust methods for inspections
+* Introduce functions for DM report analysis
+* Fixed spacing with function descriptions
+* Remove coala-bears for conflict with faust
+* Added amun inspection analysis functions
+* :pushpin: Automatic update of dependency matplotlib from 3.2.0 to 3.2.1
+* :pushpin: Automatic update of dependency autopep8 from 1.4.4 to 1.5
+* :pushpin: Automatic update of dependency jupyter-require from 0.4.2 to 0.6.1
+* :pushpin: Automatic update of dependency matplotlib from 3.1.1 to 3.2.0
+* :pushpin: Automatic update of dependency cufflinks from 0.17.0 to 0.17.3
+* :pushpin: Automatic update of dependency plotly from 4.2.1 to 4.5.4
+* :pushpin: Automatic update of dependency pandas-profiling from 2.3.0 to 2.5.0
+* :pushpin: Automatic update of dependency ipykernel from 5.1.3 to 5.1.4
+* :pushpin: Automatic update of dependency ipython from 7.9.0 to 7.13.0
