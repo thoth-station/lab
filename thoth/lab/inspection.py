@@ -1032,9 +1032,11 @@ def create_violin_plot(
         else:
             logger.warning("No project folder name provided!!")
 
+
 def columns_to_analyze(df: pd.DataFrame, low=0, high=len(df_original),
                        display_clusters=False, cluster_by_hue=False) -> pd.DataFrame:
     """Print all columns within dataframe and count of unique column values within limit.
+
     :param df: data frame to analyze as returned by `process_inspection_results'
     :param low: the lower limit (0 if not specified) of distinct value counts
     :param high: the upper limit (size of data set if not specified) of distinct value counts
@@ -1089,6 +1091,7 @@ def columns_to_analyze(df: pd.DataFrame, low=0, high=len(df_original),
 
 def display_jobs_by_subcategories(df: pd.DataFrame):
     """Create dataframe with job counts for each subcategory for every column in the data frame.
+
     :param df: dataframe with columns of unique value counts as returned by columns_to_analyze
     """
     try:
@@ -1109,6 +1112,7 @@ def display_jobs_by_subcategories(df: pd.DataFrame):
 
 def duration_plots(df: pd.DataFrame):
     """Create plots for job and build duration, elapsed time, and lead time.
+
     :param df: data frame with duration information as returned by process_inspection_results
     """
     fig = plt.figure(figsize=(10, 20))
@@ -1159,6 +1163,7 @@ def duration_plots(df: pd.DataFrame):
 
 def plot_subcategories_by_hues(df_cat: pd.DataFrame, df: pd.DataFrame, column):
     """Create scatter plots with parameter categories separated by hues.
+
     :param df_cat: filtered dataframe with columns to analyze as returned by columns_to_analyze
     :param df: data frame with duration information as returned by process_inspection_results
     :param colum: job duration/build duration columns from 'df'
@@ -1172,6 +1177,7 @@ def plot_subcategories_by_hues(df_cat: pd.DataFrame, df: pd.DataFrame, column):
 
 def concatenated_df(lst_of_df: list, column: string):
     """Reorganize dataframe to show the distribution of jobs in a category across different subsets of data.
+
     :param lst_of_df: list of inspection result dataframes which can be different datasets or subset of datasets
     :param column: column name or category for grouping to see the distribution of results
     """
@@ -1189,11 +1195,12 @@ def concatenated_df(lst_of_df: list, column: string):
 
 
 def summary_trace_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst=[]):
-    """Create trace plot scaled by percentage of compositions of each parameter analyzed with clusters to analyze
-    separated by hues.
+    """Create trace plot scaled by percentage of compositions of each parameter separated by hues.
+
     :param df: data frame with duration information as returned by process_inspection_results
     :param df_categories: filtered dataframe with columns to analyze as returned by columns_to_analyze
-    :param lst: dataframes of clustered data (if any) appended to dataframe of entire dataset (ie: [df_left_cluster, df_right_cluster, df_duration])
+    :param lst: dataframes of clustered data (if any) appended to dataframe of
+    entire dataset (ie: [df_left_cluster, df_right_cluster, df_duration])
     """
     fig = plt.figure(figsize=(15, len(df_categories.columns)*4))
     lst_df = []
@@ -1210,6 +1217,7 @@ def summary_trace_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst=[]):
 
 def summary_bar_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst_of_clusters):
     """Create trace stacked plot scaled by total jobs of each parameter within clusters (if any).
+
     :param df: data frame with duration information as returned by process_inspection_results
     :param df_categories:  filtered dataframe with columns to analyze as returned by columns_to_analyze
     :param lst_of_clusters: list of subset dataframes with the last value in list being the entire data set
@@ -1254,7 +1262,8 @@ def summary_bar_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst_of_clust
 def plot_distribution_of_jobs_combined_categories(df_hardware_category: pd.DataFrame, df_duration: pd.DataFrame,
                                                   df_analyze: pd.DataFrame):
     """
-    Plots the job duration distribution for each unique hardware combination/configuration of data.
+    Plot the job duration distribution for each unique hardware combination/configuration of data.
+
     :param df_hardware_category: dataframe of of parameters to analyze grouped by distinct rows
     :param df_duration:  dataframe with duration information as returned by process_inspection_results
     :param df_analyze: dataframe of parameters that show variation across the clusters
@@ -1279,6 +1288,7 @@ def plot_distribution_of_jobs_combined_categories(df_hardware_category: pd.DataF
 # Function takes in a column and prints out the feature class
 def map_column_to_feature_class(column_name):
     """Helper function that maps a column in the original dataframe to a feature class.
+
     :param df: data frame returned by process_inspection_results with no columns dropped (drop=False)
     """
     # The keys are keywords to help associate each column with the corresponding feature class.
@@ -1310,9 +1320,11 @@ def map_column_to_feature_class(column_name):
 
 def process_empty_or_mutable_parameters(df: pd.DataFrame):
     """Print all columns with values of type dictionary/list.
+
     These values will not work with further processing using the groupby function. Prints the unique
     value count of all columns that are unhashable (all such columns are constant). Drops these
     columns and returns a new dataframe.
+
     :param df: data frame as returned by process_inspection_results with no columns dropped (drop=False)
     """
     # This is a list to populate with columns with no data or columns with unhashable data.
@@ -1341,10 +1353,11 @@ def process_empty_or_mutable_parameters(df: pd.DataFrame):
     return df.drop(list_of_unhashable_none_values, axis=1)
 
 
-# Function takes in dataframe
 def unique_value_count_by_feature_class(df: pd.DataFrame):
     """Print unique count values per feature/class.
+
     Print results per feature/class that are subdivided in subclasses that map to it.
+
     :param df: processed dataframe as returned by the process_empty_or_mutable_parameters
     """
     dict_to_feature_class = {}
@@ -1381,6 +1394,7 @@ def unique_value_count_by_feature_class(df: pd.DataFrame):
 
 def dataframe_statistics(df: pd.DataFrame, plot_title):
     """Output a data frame with relevant statistics on job duration, build duration and time elapsed.
+
     :param df: data frame to analyze as returned by `process_inspection_results' with duration values in ms
     :param plot_title: title of fit plot
     """
@@ -1413,6 +1427,7 @@ def dataframe_statistics(df: pd.DataFrame, plot_title):
 
 def printmd(string):
     """Alternate print function implementing markdown formatting.
+
     :param string: string to print
     """
     display(Markdown(string))
