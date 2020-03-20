@@ -431,3 +431,6 @@
 * :pushpin: Automatic update of dependency pandas-profiling from 2.3.0 to 2.5.0
 * :pushpin: Automatic update of dependency ipykernel from 5.1.3 to 5.1.4
 * :pushpin: Automatic update of dependency ipython from 7.9.0 to 7.13.0
+
+## Release 0.1.6 (2020-03-20T16:26:03)
+* Modify requirements.txt
