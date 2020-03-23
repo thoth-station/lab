@@ -12,7 +12,7 @@ pandas-profiling
 prettyprinter
 
 # visualizations
-plotly==3.6.1
+plotly
 cufflinks
 matplotlib
 
