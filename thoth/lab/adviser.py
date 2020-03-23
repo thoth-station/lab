@@ -49,6 +49,7 @@ _LOGGER = logging.getLogger("thoth.lab.adviser")
 def aggregate_adviser_results(adviser_version: str, limit_results: bool = False, max_ids: int = 5) -> pd.DataFrame:
     """Aggregate adviser results from jsons stored in Ceph.
 
+    :param adviser_version: minimum adviser version considered for the analysis of adviser runs
     :param limit_results: reduce the number of inspection batch ids considered to `max_ids` to test analysis
     :param max_ids: maximum number of inspection batch ids considered
     """
@@ -73,7 +74,7 @@ def aggregate_adviser_results(adviser_version: str, limit_results: bool = False,
         _LOGGER.info(f"Analysis n.{current_a_counter}/{number_adviser_results}")
         result = document["result"]
         _LOGGER.info(ids)
-        if analyzer_version == adviser_version:
+        if int("".join(analyzer_version.split("."))) >= int("".join(adviser_version.split("."))):
             report = result.get("report")
             error = result["error"]
             if error:
