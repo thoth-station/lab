@@ -438,3 +438,8 @@
 ## Release 0.1.7 (2020-03-23T11:55:52)
 * remove constraint on plotly
 * :pushpin: Automatic update of dependency ipykernel from 5.1.4 to 5.2.0
+
+## Release 0.1.8 (2020-03-23T15:54:03)
+* Adjust output dir and dict assignment
+* Add adviser minimum version
+* Methods to analyze adviser results
