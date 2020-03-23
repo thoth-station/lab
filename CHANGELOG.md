@@ -434,3 +434,7 @@
 
 ## Release 0.1.6 (2020-03-20T16:26:03)
 * Modify requirements.txt
+
+## Release 0.1.7 (2020-03-23T11:55:52)
+* remove constraint on plotly
+* :pushpin: Automatic update of dependency ipykernel from 5.1.4 to 5.2.0
