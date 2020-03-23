@@ -79,11 +79,12 @@ def aggregate_adviser_results(adviser_version: str, limit_results: bool = False,
             error = result["error"]
             if error:
                 error_msg = result["error_msg"]
-                adviser_dict[ids] = {}
-                adviser_dict[ids]["justification"] = [{"message": error_msg, "type": "ERROR"}]
-                adviser_dict[ids]["error"] = error
-                adviser_dict[ids]["message"] = error_msg
-                adviser_dict[ids]["type"] = "ERROR"
+                adviser_dict[ids] = {
+                    "justification": [{"message": error_msg, "type": "ERROR"}],
+                    "error": error,
+                    "message": error_msg,
+                    "type": "ERROR"
+                }
             else:
                 adviser_dict = extract_adviser_justifications(report=report, adviser_dict=adviser_dict, ids=ids)
 
@@ -133,11 +134,12 @@ def extract_justifications_from_products(
         justification = product["justification"]
         if justification:
             # TODO: Consider all justifications
-            adviser_dict[ids] = {}
-            adviser_dict[ids]["justification"] = justification
-            adviser_dict[ids]["error"] = False
-            adviser_dict[ids]["message"] = justification[0]["message"]
-            adviser_dict[ids]["type"] = justification[0]["type"]
+            adviser_dict[ids] = {
+                "justification": justification,
+                "error": False,
+                "message": justification[0]["message"],
+                "type": justification[0]["type"]
+            }
 
     return adviser_dict
 
@@ -180,12 +182,13 @@ def create_adviser_results_histogram(plot_df: pd.DataFrame):
 
     for index, row in plot_df[["jm_hash_id_encoded", "message", "type"]].iterrows():
         encoded_id = row["jm_hash_id_encoded"]
-        if row["jm_hash_id_encoded"] not in histogram_data.keys():
-            histogram_data[encoded_id] = {}
-            histogram_data[encoded_id]["jm_hash_id_encoded"] = f"type-{encoded_id}"
-            histogram_data[encoded_id]["message"] = row["message"]
-            histogram_data[encoded_id]["type"] = row["type"]
-            histogram_data[encoded_id]["count"] = plot_df["jm_hash_id_encoded"].value_counts()[encoded_id]
+        if encoded_id not in histogram_data.keys():
+            histogram_data[encoded_id] = {
+                "jm_hash_id_encoded": f"type-{encoded_id}",
+                "message": row["message"],
+                "type": row["type"],
+                "count": plot_df["jm_hash_id_encoded"].value_counts()[encoded_id]
+            }
 
     justifications_df = pd.DataFrame(histogram_data)
     justifications_df = justifications_df.transpose()
@@ -254,19 +257,17 @@ def _aggregate_data_per_interval(adviser_justification_df: pd.DataFrame, interva
         for index, row in subset_df[["jm_hash_id_encoded", "message", "date"]].iterrows():
             encoded_id = row["jm_hash_id_encoded"]
             if encoded_id not in aggregated_data[high].keys():
-                aggregated_data[high][encoded_id] = {}
-                aggregated_data[high][encoded_id]["jm_hash_id_encoded"] = f"type-{encoded_id}"
-                aggregated_data[high][encoded_id]["message"] = row["message"]
-                aggregated_data[high][encoded_id]["count"] = subset_df["jm_hash_id_encoded"].value_counts()[encoded_id]
+                aggregated_data[high][encoded_id] = {
+                    "jm_hash_id_encoded": f"type-{encoded_id}",
+                    "message": row["message"],
+                    "count": subset_df["jm_hash_id_encoded"].value_counts()[encoded_id]
+                }
 
     return aggregated_data
 
 
 def _create_heatmaps_values(input_data: dict, advise_encoded_type: List[int]):
-    """Create values for heatmaps.
-
-    :param adviser_justification_df: data frame as returned by `create_final_dataframe' per identifier.
-    """
+    """Create values for heatmaps."""
     heatmaps_values = []
     for t in set(advise_encoded_type):
         type_values = []
@@ -282,11 +283,13 @@ def _create_heatmaps_values(input_data: dict, advise_encoded_type: List[int]):
 
 
 def create_adviser_heatmap(
-    adviser_justification_df: pd.DataFrame, save_result: bool = False, project_folder: str = "", folder_name: str = ""
+    adviser_justification_df: pd.DataFrame, save_result: bool = False, output_dir: str = ""
 ):
     """Create adviser justifications heatmap plot.
 
     :param adviser_justification_df: data frame as returned by `create_final_dataframe' per identifier.
+    :param save_result: resulting plots created are stored in `output_dir`.
+    :param output_dir: output directory where plots are stored if `save_results` is set to True.
     """
     data = _aggregate_data_per_interval(adviser_justification_df=adviser_justification_df)
     heatmaps_values = _create_heatmaps_values(
@@ -304,19 +307,13 @@ def create_adviser_heatmap(
     plt.show()
 
     if save_result:
-        if project_folder != "":
+        if output_dir != "":
             current_path = Path.cwd()
-            project_dir_path = current_path.joinpath(project_folder)
+            project_dir_path = current_path.joinpath(output_dir)
 
             os.makedirs(project_dir_path, exist_ok=True)
 
-            if folder_name != "":
-                new_dir_path = project_dir_path.joinpath(folder_name)
-                os.makedirs(new_dir_path, exist_ok=True)
-                fig = ax.get_figure()
-                fig.savefig(f"{new_dir_path}/Adviser_justifications_{datetime.now()}.png", bbox_inches="tight")
-            else:
-                fig = ax.get_figure()
-                fig.savefig(f"{project_dir_path}/Adviser_justifications_{datetime.now()}.png", bbox_inches="tight")
+            fig = ax.get_figure()
+            fig.savefig(f"{project_dir_path}/Adviser_justifications_{datetime.now()}.png", bbox_inches="tight")
 
     plt.close()
