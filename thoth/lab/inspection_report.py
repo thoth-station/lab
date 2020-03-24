@@ -66,7 +66,7 @@ def create_df_report(df: pd.DataFrame) -> pd.DataFrame:
         try:
             unique_values = df[c_name].unique()
             dataframe_report[c_name] = [unique_values]
-        except NotUniqueValues as exc:
+        except Exception as exc:
             logger.info(exc)
             dataframe_report[c_name] = [df[c_name].values]
             pass
@@ -74,7 +74,7 @@ def create_df_report(df: pd.DataFrame) -> pd.DataFrame:
     return df_unique
 
 
-def create_dfs_inspection_classes(df: pd.DataFrame) -> dict:
+def create_dfs_inspection_classes(inspection_df: pd.DataFrame) -> dict:
     """Create all inspection dataframes per class with unique values and complete values."""
     class_inspection_dfs = {}
     class_inspection_dfs_unique = {}
@@ -89,10 +89,10 @@ def create_dfs_inspection_classes(df: pd.DataFrame) -> dict:
             for feature in class_features:
 
                 if len(feature) > 1:
-                    class_df = df[
+                    class_df = inspection_df[
                         [
                             col
-                            for col in df.columns.values
+                            for col in inspection_df.columns.values
                             if any(c in col for c in _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[feature])
                         ]
                     ]
@@ -101,8 +101,12 @@ def create_dfs_inspection_classes(df: pd.DataFrame) -> dict:
                     class_df_unique = create_df_report(class_df)
                     class_inspection_dfs_unique[class_inspection][feature] = class_df_unique
                 else:
-                    class_df = df[
-                        [col for col in df.columns.values if _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[feature] in col]
+                    class_df = inspection_df[
+                        [
+                            col
+                            for col in inspection_df.columns.values
+                            if _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[feature] in col
+                        ]
                     ]
                     class_inspection_dfs[class_inspection][feature] = class_df
 
@@ -111,10 +115,10 @@ def create_dfs_inspection_classes(df: pd.DataFrame) -> dict:
 
         elif len(_INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[class_features[0]]) > 1:
 
-            class_df = df[
+            class_df = inspection_df[
                 [
                     col
-                    for col in df.columns.values
+                    for col in inspection_df.columns.values
                     if any(c in col for c in _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[class_features[0]])
                 ]
             ]
@@ -124,10 +128,10 @@ def create_dfs_inspection_classes(df: pd.DataFrame) -> dict:
             class_inspection_dfs_unique[class_inspection] = class_df_unique
 
         else:
-            class_df = df[
+            class_df = inspection_df[
                 [
                     col
-                    for col in df.columns.values
+                    for col in inspection_df.columns.values
                     if _INSPECTION_JSON_DF_KEYS_FEATURES_MAPPING[class_features[0]][0] in col
                 ]
             ]

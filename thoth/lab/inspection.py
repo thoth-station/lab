@@ -785,13 +785,13 @@ def create_final_dataframe(
     processed_string_result["re_hash_id"] = [pp[2] for pp in re_encoded]
 
     # PI
-    processed_string_result["pi_name"] = [pi_n[0] for pi_n in df[["stdout__name"]].values]
-    processed_string_result["pi_component"] = [pi_c[0] for pi_c in df[["stdout__component"]].values]
-    processed_string_result["pi_sha256"] = [pi_c[0] for pi_c in df[["script_sha256"]].values]
+    processed_string_result["pi_name"] = [pi_n[0] for pi_n in inspection_df[["stdout__name"]].values]
+    processed_string_result["pi_component"] = [pi_c[0] for pi_c in inspection_df[["stdout__component"]].values]
+    processed_string_result["pi_sha256"] = [pi_c[0] for pi_c in inspection_df[["script_sha256"]].values]
 
     # PI performance results
-    processed_string_result["elapsed_time"] = [r_e[0] for r_e in df[["stdout__@result__elapsed"]].values]
-    processed_string_result["rate"] = [r_r[0] for r_r in df[["stdout__@result__rate"]].values]
+    processed_string_result["elapsed_time"] = [r_e[0] for r_e in inspection_df[["stdout__@result__elapsed"]].values]
+    processed_string_result["rate"] = [r_r[0] for r_r in inspection_df[["stdout__@result__rate"]].values]
 
     final_df = pd.DataFrame(processed_string_result)
 
@@ -1442,17 +1442,18 @@ def create_multiple_violin_plot(
 
 
 def columns_to_analyze(
-    df: pd.DataFrame, low=0, high=len(df_original), display_clusters=False, cluster_by_hue=False
+    df: pd.DataFrame, low: int = 0, display_clusters: bool = False, cluster_by_hue: bool = False
 ) -> pd.DataFrame:
     """Print all columns within dataframe and count of unique column values within limit.
 
     :param df: data frame to analyze as returned by `process_inspection_results'
     :param low: the lower limit (0 if not specified) of distinct value counts
-    :param high: the upper limit (size of data set if not specified) of distinct value counts
     :param display_clusters: if true, displays grouped counts of parameter and parameter sort_values
     :param cluster_by_hue: if true, displays distribution of parameters to analyze sorted by hues
     """
     lst_columns_to_analyze = []
+
+    high = len(df)
 
     # Groups every column by unique values
     logger.info("#### Columns to analyze, Unique Value Count")
@@ -1508,7 +1509,7 @@ def display_jobs_by_subcategories(df: pd.DataFrame):
         # Introduce index column for job counts
         df = df.reset_index()
         for i in df.columns:
-            created_values = inspection.query_inspection_dataframe(df, groupby=i)
+            created_values = query_inspection_dataframe(df, groupby=i)
             if not i == "index":
                 df_inspection_id = created_values.groupby([i]).count()
                 df_inspection_id = df_inspection_id.filter(["index", i])
@@ -1583,14 +1584,14 @@ def plot_subcategories_by_hues(df_cat: pd.DataFrame, df: pd.DataFrame, column):
         g.add_legend()
 
 
-def concatenated_df(lst_of_df: list, column: string):
+def concatenated_df(dfs: List[pd.DataFrame], column: str):
     """Reorganize dataframe to show the distribution of jobs in a category across different subsets of data.
 
-    :param lst_of_df: list of inspection result dataframes which can be different datasets or subset of datasets
+    :param dfs: list of inspection result dataframes which can be different datasets or subset of datasets
     :param column: column name or category for grouping to see the distribution of results
     """
     lst_processed = []
-    for i in lst_of_df:
+    for i in dfs:
         i = i.reset_index()
         df_grouping_category = i.groupby([column]).count()
         col_one = df_grouping_category["index"]
@@ -1602,18 +1603,20 @@ def concatenated_df(lst_of_df: list, column: string):
     return df_final
 
 
-def summary_trace_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst=[]):
+def summary_trace_plot(df: pd.DataFrame, df_categories: pd.DataFrame, dfs: Optional[List[pd.DataFrame]] = None):
     """Create trace plot scaled by percentage of compositions of each parameter separated by hues.
 
     :param df: data frame with duration information as returned by process_inspection_results
     :param df_categories: filtered dataframe with columns to analyze as returned by columns_to_analyze
-    :param lst: dataframes of clustered data (if any) appended to dataframe of
+    :param dfs: dataframes of clustered data (if any) appended to dataframe of
     entire dataset (ie: [df_left_cluster, df_right_cluster, df_duration])
     """
+    if not dfs:
+        dfs = []
     fig = plt.figure(figsize=(15, len(df_categories.columns) * 4))
     lst_df = []
     for i in df_categories.columns:
-        lst_df.append((concatenated_df(lst, i)))
+        lst_df.append((concatenated_df(dfs, i)))
     lst_to_analyze = df_categories.columns
     count = 0
     for i in range(len(df_categories.columns)):
@@ -1623,18 +1626,18 @@ def summary_trace_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst=[]):
         count += 1
 
 
-def summary_bar_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst_of_clusters):
+def summary_bar_plot(df: pd.DataFrame, df_categories: pd.DataFrame, clusters: List[pd.DataFrame]):
     """Create trace stacked plot scaled by total jobs of each parameter within clusters (if any).
 
     :param df: data frame with duration information as returned by process_inspection_results
     :param df_categories:  filtered dataframe with columns to analyze as returned by columns_to_analyze
-    :param lst_of_clusters: list of subset dataframes with the last value in list being the entire data set
+    :param clusters: list of subset dataframes with the last value in list being the entire data set
     """
     fig = plt.figure(figsize=(15, len(df_categories.columns) * 7))
     lst_df = []  # list of dataframes, dataframe for each cluster
 
     for i in df_categories.columns:
-        lst_df.append((concatenated_df(lst_of_clusters, i)))
+        lst_df.append((concatenated_df(clusters, i)))
 
     lst_to_analyze = df_categories.columns
     count = 0
@@ -1644,10 +1647,10 @@ def summary_bar_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst_of_clust
         ax.set_title(lst_to_analyze[count])
         colors = ["#addd8e", "#fdd0a2", "#a6bddb", "#7fcdbb"]
 
-        if len(lst_of_clusters) > 1:
+        if len(clusters) > 1:
             lst_cluster = []
-            for j in range(len(lst_of_clusters) - 1):
-                lst_cluster.append("Total jobs:{}".format(len(lst_of_clusters[j])))
+            for j in range(len(clusters) - 1):
+                lst_cluster.append("Total jobs:{}".format(len(clusters[j])))
             g = (
                 lst_df[count]
                 .loc[:, lst_cluster]
@@ -1656,7 +1659,7 @@ def summary_bar_plot(df: pd.DataFrame, df_categories: pd.DataFrame, lst_of_clust
 
         g = (
             lst_df[count]
-            .loc[:, ["Total jobs:{}".format(len(lst_of_clusters[-1]))]]
+            .loc[:, ["Total jobs:{}".format(len(clusters[-1]))]]
             .plot(align="edge", kind="barh", stacked=False, color="#7fcdbb", width=0.3, ax=ax)
         )
         g.legend(loc=9, bbox_to_anchor=(1.3, 0.7), fontsize="small", fancybox=True)
