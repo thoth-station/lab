@@ -798,33 +798,41 @@ def create_final_dataframe(
     return final_df
 
 
-def create_filtered_df(
+def create_filtered_final_df(
     df: pd.DataFrame,
     pi_name: Optional[str] = None,
     pi_component: Optional[str] = None,
     runtime_environment: Optional[str] = None,
     packages: Optional[List[Tuple[str, str, str]]] = None,
+    greater_than: bool = False
 ) -> pd.DataFrame:
-    """Create dataframe using the filters selected for plots."""
+    """Create dataframe using the filters selected for plots.
+
+    :params greater_than: if set to True consider >= of the python packages considered
+    """
     if not df.shape[0]:
         logger.info("DataFrame provided is empty, nothing can be filtered.")
 
-    filters = []
+    if greater_than and not packages:
+        logger.info("greater_than parameter is used only if packages parameter is provided.")
+
+    filters = {}
 
     if pi_name:
-        filters.append(("pi_name", pi_name))
+        filters["pi_name"] = [("pi_name", pi_name)]
 
     if pi_component:
-        filters.append(("pi_component", pi_component))
+        filters["pi_component"] = [("pi_component", pi_component)]
 
     if runtime_environment:
-        filters.append(("re_string", runtime_environment))
+        filters["runtime_environment"] = [("re_string", runtime_environment)]
 
     if packages:
+        filters["python_packages"] = []
         for package in packages:
-            filters.append((package[0], package))
+            filters["python_packages"].append((package[0], package))
 
-    filtered_final_df = filter_df(df, filters)
+    filtered_final_df = _filter_df(df, greater_than, filters)
 
     if not filtered_final_df.shape[0]:
         logger.info("There are no results for the filters selected. Please change filters.")
@@ -834,11 +842,15 @@ def create_filtered_df(
     return filtered_final_df
 
 
-def filter_df(df, *args):
+def _filter_df(df: pd.DataFrame, greater_than: bool, filters: Dict[str, Any]):
     """Filter Dataframe."""
-    for f in args:
-        for k, v in f:
-            df = df[df[k] == v]
+    for f_name, f_values in filters.items():
+        if f_name == "python_packages" and greater_than:
+            # TODO: Implement filter by package version using thoth-python functionalities
+            logger.warning(f"Filter for version greater_than functionality needs to be implemented yet.")
+        else:
+            for f in f_values:
+                df = df[df[f[0]] == f[1]]
     return df
 
 
