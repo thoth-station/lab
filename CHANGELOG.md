@@ -443,3 +443,10 @@
 * Adjust output dir and dict assignment
 * Add adviser minimum version
 * Methods to analyze adviser results
+
+## Release 0.1.9 (2020-04-01T15:46:52)
+* Move iplot initilization which is only for running in notebook
+* Substitute-package
+* :pushpin: Automatic update of dependency thoth-storages from 0.22.6 to 0.22.7
+* :pushpin: Automatic update of dependency thoth-storages from 0.22.5 to 0.22.6
+* Correct errors in functions
