@@ -19,7 +19,7 @@ matplotlib = "*"
 # nbextensions
 jupyter-require = "*"
 jupyter_contrib_nbextensions = "*"  # needed by pipenv shell
-sklearn = "*"
+scikit-learn = "*"
 
 [dev-packages]
 autopep8 = "*"
