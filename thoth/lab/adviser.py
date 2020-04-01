@@ -24,11 +24,13 @@ import hashlib
 import copy
 
 import pandas as pd
-import plotly
-import plotly.graph_objs as go
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+import plotly
+import plotly.graph_objs as go
+from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 
 from pathlib import Path
 from datetime import datetime
@@ -37,9 +39,6 @@ from typing import Union, List, Dict, Any
 from numpy import array
 from sklearn.preprocessing import LabelEncoder
 from thoth.storages import AdvisersResultsStore
-from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
-
-plotly.offline.init_notebook_mode(connected=True)
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
@@ -178,6 +177,7 @@ def create_adviser_results_histogram(plot_df: pd.DataFrame):
 
     :param plot_df dataframe for plot of adviser results
     """
+    plotly.offline.init_notebook_mode(connected=True)
     histogram_data = {}
 
     for index, row in plot_df[["jm_hash_id_encoded", "message", "type"]].iterrows():
