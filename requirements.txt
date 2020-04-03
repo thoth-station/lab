@@ -20,5 +20,7 @@ matplotlib
 jupyter-require
 jupyter_contrib_nbextensions  # needed by pipenv shell
 
+scikit-learn
+
 # dev-packages
 autopep8 = "*"
