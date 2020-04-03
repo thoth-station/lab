@@ -450,3 +450,7 @@
 * :pushpin: Automatic update of dependency thoth-storages from 0.22.6 to 0.22.7
 * :pushpin: Automatic update of dependency thoth-storages from 0.22.5 to 0.22.6
 * Correct errors in functions
+
+## Release 0.1.10 (2020-04-03T11:35:05)
+* Fixes needed to make the release happen
+* Add missing pacakge to requirements.txt
