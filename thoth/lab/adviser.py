@@ -130,24 +130,23 @@ def extract_justifications_from_products(
         return adviser_dict
 
     for product in products:
-        justification = product["justification"]
-        if justification:
-
-            # TODO: Consider all justifications
-            if "advisory" in justification[0]:
-                adviser_dict[ids] = {
-                    "justification": justification,
-                    "error": True,
-                    "message": justification[0]["advisory"],
-                    "type": "INFO"
-                }
-            else:
-                adviser_dict[ids] = {
-                    "justification": justification,
-                    "error": False,
-                    "message": justification[0]["message"],
-                    "type": justification[0]["type"]
-                }
+        justifications = product["justification"]
+        if justifications:
+            for justification in justifications:
+                if "advisory" in justification:
+                    adviser_dict[ids] = {
+                        "justification": justification,
+                        "error": True,
+                        "message": justification["advisory"],
+                        "type": "INFO"
+                    }
+                else:
+                    adviser_dict[ids] = {
+                        "justification": justification,
+                        "error": False,
+                        "message": justification["message"],
+                        "type": justification["type"]
+                    }
 
     return adviser_dict
 
