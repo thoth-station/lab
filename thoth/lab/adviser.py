@@ -175,9 +175,12 @@ def create_final_dataframe(adviser_dataframe: pd.DataFrame) -> pd.DataFrame:
 
     justification_result["jm_hash_id_encoded"] = {el[0]: el[3] for el in jm_encoding}
 
-    final_dataframe = pd.DataFrame(justification_result)
+    total_dataframe = pd.DataFrame(justification_result)
 
-    return final_dataframe
+    info_dataframe = total_dataframe[total_dataframe["type"] == "INFO"]
+    error_dataframe = total_dataframe[total_dataframe["type"] == "ERROR"]
+
+    return total_dataframe, info_dataframe, error_dataframe
 
 
 def create_adviser_results_histogram(plot_df: pd.DataFrame):
@@ -290,10 +293,16 @@ def _create_heatmaps_values(input_data: dict, advise_encoded_type: List[int]):
     return heatmaps_values
 
 
-def create_adviser_heatmap(adviser_justification_df: pd.DataFrame, save_result: bool = False, output_dir: str = ""):
+def create_adviser_heatmap(
+    adviser_justification_df: pd.DataFrame,
+    file_name: Optional[str] = None,
+    save_result: bool = False,
+    output_dir: Optional[str] = None,
+):
     """Create adviser justifications heatmap plot.
 
     :param adviser_justification_df: data frame as returned by `create_final_dataframe' per identifier.
+    :param file_name: file name used in the name of files saved
     :param save_result: resulting plots created are stored in `output_dir`.
     :param output_dir: output directory where plots are stored if `save_results` is set to True.
     """
@@ -325,14 +334,17 @@ def create_adviser_heatmap(adviser_justification_df: pd.DataFrame, save_result: 
     plt.show()
 
     if save_result:
-        if output_dir != "":
+        if output_dir:
             current_path = Path.cwd()
             project_dir_path = current_path.joinpath(output_dir)
 
             os.makedirs(project_dir_path, exist_ok=True)
-
+            if not file_name:
+                file_name = ""
             fig = ax.get_figure()
-            fig.savefig(f"{project_dir_path}/Adviser_justifications_{datetime.now()}.png", bbox_inches="tight")
+            fig.savefig(
+                f"{project_dir_path}/Adviser_justifications_{file_name}_{datetime.now()}.png", bbox_inches="tight"
+            )
 
     plt.close()
     return df_heatmap
