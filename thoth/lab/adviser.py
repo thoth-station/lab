@@ -132,6 +132,7 @@ def extract_justifications_from_products(
     for product in products:
         justification = product["justification"]
         if justification:
+
             # TODO: Consider all justifications
             if "advisory" in justification[0]:
                 adviser_dict[ids] = {
@@ -147,7 +148,6 @@ def extract_justifications_from_products(
                     "message": justification[0]["message"],
                     "type": justification[0]["type"]
                 }
-
 
     return adviser_dict
 
