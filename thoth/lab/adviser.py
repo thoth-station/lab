@@ -64,15 +64,15 @@ def aggregate_adviser_results(adviser_version: str, limit_results: bool = False,
     current_a_counter = 1
 
     if limit_results:
-        _LOGGER.info(f"Limiting results to {max_ids} to test functions!!")
+        _LOGGER.debug(f"Limiting results to {max_ids} to test functions!!")
 
     for n, ids in enumerate(adviser_ids):
         document = adviser_store.retrieve_document(ids)
         datetime_advise_run = document["metadata"].get("datetime")
         analyzer_version = document["metadata"].get("analyzer_version")
-        _LOGGER.info(f"Analysis n.{current_a_counter}/{number_adviser_results}")
+        _LOGGER.debug(f"Analysis n.{current_a_counter}/{number_adviser_results}")
         result = document["result"]
-        _LOGGER.info(ids)
+        _LOGGER.debug(ids)
         if int("".join(analyzer_version.split("."))) >= int("".join(adviser_version.split("."))):
             report = result.get("report")
             error = result["error"]
@@ -130,15 +130,23 @@ def extract_justifications_from_products(
         return adviser_dict
 
     for product in products:
-        justification = product["justification"]
-        if justification:
-            # TODO: Consider all justifications
-            adviser_dict[ids] = {
-                "justification": justification,
-                "error": False,
-                "message": justification[0]["message"],
-                "type": justification[0]["type"]
-            }
+        justifications = product["justification"]
+        if justifications:
+            for justification in justifications:
+                if "advisory" in justification:
+                    adviser_dict[ids] = {
+                        "justification": justification,
+                        "error": True,
+                        "message": justification["advisory"],
+                        "type": "INFO"
+                    }
+                else:
+                    adviser_dict[ids] = {
+                        "justification": justification,
+                        "error": False,
+                        "message": justification["message"],
+                        "type": justification["type"]
+                    }
 
     return adviser_dict
 
@@ -268,16 +276,21 @@ def _aggregate_data_per_interval(adviser_justification_df: pd.DataFrame, interva
 
 def _create_heatmaps_values(input_data: dict, advise_encoded_type: List[int]):
     """Create values for heatmaps."""
-    heatmaps_values = []
-    for t in set(advise_encoded_type):
+    heatmaps_values = {}
+
+    for advise_type in set(advise_encoded_type):
+        _LOGGER.debug(f"Analyzing advise type... {advise_type}")
         type_values = []
-        for interval_runs in input_data.values():
-            if t in interval_runs.keys():
-                type_values.append(interval_runs[t]["count"])
+
+        for upper_interval, interval_runs in input_data.items():
+            _LOGGER.debug(f"Checking for that advise type in 'interval'... {upper_interval}")
+
+            if advise_type in interval_runs.keys():
+                type_values.append(interval_runs[advise_type]["count"])
             else:
                 type_values.append(0)
 
-        heatmaps_values.append(type_values)
+        heatmaps_values[advise_type] = type_values
 
     return heatmaps_values
 
@@ -295,14 +308,26 @@ def create_adviser_heatmap(
     heatmaps_values = _create_heatmaps_values(
         input_data=data, advise_encoded_type=adviser_justification_df["jm_hash_id_encoded"].values
     )
-
-    df_heatmap = pd.DataFrame(heatmaps_values, index=[a for a in set(adviser_justification_df["message"].values)])
-    df_heatmap = df_heatmap.transpose()
+    df_heatmap = pd.DataFrame(heatmaps_values)
     df_heatmap["interval"] = data.keys()
     df_heatmap = df_heatmap.set_index(["interval"])
+    df_heatmap = df_heatmap.transpose()
+
+    adviser_justifications_map = {}
+    for index, row in adviser_justification_df[["jm_hash_id_encoded", "message"]].iterrows():
+        if row["jm_hash_id_encoded"] not in adviser_justifications_map.keys():
+            adviser_justifications_map[row["jm_hash_id_encoded"]] = row["message"]
+
+    justifications_ordered = []
+    for index, row in df_heatmap.iterrows():
+
+        justifications_ordered.append(adviser_justifications_map[index])
+
+    df_heatmap["advise_type"] = justifications_ordered
+    df_heatmap = df_heatmap.set_index(["advise_type"])
 
     plt.subplots(figsize=(15, 15))
-    ax = sns.heatmap(df_heatmap.transpose(), annot=True, fmt="g")
+    ax = sns.heatmap(df_heatmap, annot=True, fmt="g")
 
     plt.show()
 
@@ -317,3 +342,4 @@ def create_adviser_heatmap(
             fig.savefig(f"{project_dir_path}/Adviser_justifications_{datetime.now()}.png", bbox_inches="tight")
 
     plt.close()
+    return df_heatmap
