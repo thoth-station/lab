@@ -34,7 +34,7 @@ from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 
 from pathlib import Path
 from datetime import datetime
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Optional
 
 from numpy import array
 from sklearn.preprocessing import LabelEncoder
@@ -342,8 +342,12 @@ def create_adviser_heatmap(
             if not file_name:
                 file_name = ""
             fig = ax.get_figure()
+            if not file_name:
+                file_name = ""
+
             fig.savefig(
-                f"{project_dir_path}/Adviser_justifications_{file_name}_{datetime.now()}.png", bbox_inches="tight"
+                f"{project_dir_path}/Adviser_justifications_{file_name}_{datetime.utcnow()}.png",
+                bbox_inches="tight"
             )
 
     plt.close()
