@@ -49,8 +49,8 @@ def aggregate_adviser_results(adviser_version: str, limit_results: bool = False,
     """Aggregate adviser results from jsons stored in Ceph.
 
     :param adviser_version: minimum adviser version considered for the analysis of adviser runs
-    :param limit_results: reduce the number of inspection batch ids considered to `max_ids` to test analysis
-    :param max_ids: maximum number of inspection batch ids considered
+    :param limit_results: reduce the number of adviser runs ids considered to `max_ids` to test analysis
+    :param max_ids: maximum number of adviser runs ids considered
     """
     adviser_store = AdvisersResultsStore()
     adviser_store.connect()
@@ -238,14 +238,15 @@ def create_adviser_results_histogram(plot_df: pd.DataFrame):
     return justifications_df
 
 
-def _aggregate_data_per_interval(adviser_justification_df: pd.DataFrame, intervals: int = 10):
-    """Aggregate advise justifications per time intervals."""
+def _aggregate_data_per_interval(adviser_justification_df: pd.DataFrame):
+    """Aggregate advise justifications per weekly time intervals."""
     begin = min(adviser_justification_df["date"].values)
     end = max(adviser_justification_df["date"].values)
     timestamps = []
-    delta = (end - begin) / intervals
+    delta = np.timedelta64(7, 'D')
+    intervals = (end - begin) / delta
     value = begin
-    for i in range(1, intervals + 1):
+    for i in range(1, int(intervals) + 1):
         value = value + delta
         timestamps.append(value)
     timestamps[0] = begin
