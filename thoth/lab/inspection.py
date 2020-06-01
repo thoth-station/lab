@@ -916,7 +916,7 @@ def create_inspection_3d_plot(plot_df: pd.DataFrame, quantity: str, identifiers_
 
 
 def create_inspection_2d_plot(plot_df: pd.DataFrame, quantity: str, identifiers_inspections: List[str]):
-    """Create inspection performance parameters plot in 3D.
+    """Create inspection performance parameters plot in 2D.
 
     :param plot_df dataframe for plot of inspections results
     """
