@@ -30,7 +30,7 @@ _LOGGER = logging.getLogger("thoth.lab.solver")
 
 def aggregate_solver_results(
     limit_results: bool = False, max_ids: int = 5, is_local: bool = True, solver_repo_path: Path = Path("solver")
-) -> pd.DataFrame:
+) -> list:
     """Aggregate solver results from jsons stored in Ceph or locally from `solver` repo.
 
     :param limit_results: reduce the number of solver reports ids considered to `max_ids` to test analysis
