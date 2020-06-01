@@ -454,3 +454,13 @@
 ## Release 0.1.10 (2020-04-03T11:35:05)
 * Fixes needed to make the release happen
 * Add missing pacakge to requirements.txt
+
+## Release 0.1.11 (2020-06-01T11:13:13)
+* Correct docstring
+* Adjust type
+* Add solver specific functions
+* Add github templates
+* Add all justifications
+* Adjust heat map analysis
+* Add check for CVE messages
+* Use RHEL 8
