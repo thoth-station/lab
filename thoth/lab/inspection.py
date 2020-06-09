@@ -40,8 +40,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from pandas_profiling import ProfileReport as profile
-from pandas.io.json import json_normalize
-
 from prettyprinter import pformat
 
 from typing import Any, Dict, List, Tuple, Union, Optional
@@ -60,8 +58,9 @@ from IPython.display import display
 
 from thoth.storages import InspectionResultsStore
 from thoth.lab.utils import group_index
+from .common import _aggregate_thoth_results
 
-logger = logging.getLogger("thoth.lab.inspection")
+_LOGGER = logging.getLogger("thoth.lab.inspection")
 
 logging.basicConfig(level=logging.INFO)
 
@@ -117,7 +116,7 @@ def extract_keys_from_dataframe(df: pd.DataFrame, key: str):
         elif key in available_combined_keys:
             ndf = df[df["Upper_keys"].str.contains(f"{key}$", regex=True)]
         else:
-            logger.warning("The key is not in the json")
+            _LOGGER.warning("The key is not in the json")
             ndf = "".join(
                 [
                     f"The available keys are (WARNING: Some of the keys have no leafs):{available_keys} ",
@@ -133,6 +132,31 @@ def extract_keys_from_dataframe(df: pd.DataFrame, key: str):
     return ndf
 
 
+def aggregate_inspection_results(
+    limit_results: bool = False,
+    max_ids: int = 5,
+    is_local: bool = True,
+    inspection_repo_path: Path = Path("performance"),
+) -> list:
+    """Aggregate inspection results from jsons stored in Ceph or locally from `performance` repo.
+
+    :param limit_results: reduce the number of inspection reports ids considered to `max_ids` to test analysis
+    :param max_ids: maximum number of inspection reports ids considered
+    :param is_local: flag to retreive the dataset locally or from S3 (credentials are required)
+    :param inspection_repo_path: required to retrieve the performance dataset locally and `is_local` is set to True
+    """
+    inspection_reports = _aggregate_thoth_results(
+        limit_results=limit_results,
+        max_ids=max_ids,
+        is_local=is_local,
+        repo_path=inspection_repo_path,
+        store=InspectionResultsStore,
+        is_inspection=True,
+    )
+
+    return inspection_reports
+
+
 def filter_inspection_ids(inspection_identifiers: List[str]) -> dict:
     """Filter inspection ids list according to the inspection identifier selected.
 
@@ -146,7 +170,7 @@ def filter_inspection_ids(inspection_identifiers: List[str]) -> dict:
 
     inspections_selected = sum([len(batch_n) for batch_n in filtered_inspection_ids.values()])
     inspection_batches = [(batch_name, len(batch_count)) for batch_name, batch_count in filtered_inspection_ids.items()]
-    logger.info(f"There are {inspections_selected} inspection runs selected: {inspection_batches} respectively")
+    _LOGGER.info(f"There are {inspections_selected} inspection runs selected: {inspection_batches} respectively")
 
     return filtered_inspection_ids, reduced_inspection_batch_identifiers
 
@@ -161,14 +185,14 @@ def show_inspection_inputs(
     :param filtered_inspection_batch_ids: llist of inspection batch ids after filtering
     """
     total_inspections = 0
-    logger.info("insepction_batch_id | Number of inspections")
+    _LOGGER.info("insepction_batch_id | Number of inspections")
     for insepction_batch_id, inspections in filtered_inspection_ids.items():
-        logger.info(f"{insepction_batch_id} | {len(inspections)}")
+        _LOGGER.info(f"{insepction_batch_id} | {len(inspections)}")
         total_inspections += len(inspections)
 
-    logger.info(f"Initial inspection batches considered: {len(inspection_batch_ids)}")
-    logger.info(f"Inspections batches after filtering: {len(filtered_inspection_batch_ids)}")
-    logger.info(f"Total number of inspections considered: {total_inspections}")
+    _LOGGER.info(f"Initial inspection batches considered: {len(inspection_batch_ids)}")
+    _LOGGER.info(f"Inspections batches after filtering: {len(filtered_inspection_batch_ids)}")
+    _LOGGER.info(f"Total number of inspections considered: {total_inspections}")
 
 
 def filter_document_ids(inspection_store, inspection_identifiers: List[str]) -> Dict[str, List]:
@@ -214,7 +238,7 @@ def process_inspection_results(
     exclude = exclude or []
     apply = apply or ()
 
-    df = json_normalize(inspection_results, sep="__")  # each row resembles InspectionResult
+    df = pd.json_normalize(inspection_results, sep="__")  # each row resembles InspectionResult
 
     if len(df) <= 1:
         return df
@@ -223,23 +247,19 @@ def process_inspection_results(
         for col in df.filter(regex=regex).columns:
             df[col] = df[col].apply(func)
 
-    keys = [k for k in inspection_results[0] if k not in exclude]
-    for k in keys:
-        if k in exclude:
-            continue
-        d = df.filter(regex=k)
-        p = profile(d)
+    if drop:
+        keys = [k for k in inspection_results[0] if k not in exclude]
+        for k in keys:
+            if k in exclude:
+                continue
+            d = df.filter(regex=k)
+            p = profile(d)
 
-        rejected = (
-            p.description_set["variables"]
-            .query("distinct_count <= 1 & type != 'UNSUPPORTED'")
-            .filter(regex="^((?!version).)*$", axis=0)
-        )  # explicitly include versions
+            rejected = p.get_rejected_variables()
 
-        if verbose:
-            print("Rejected columns: ", rejected.index)
+            if verbose:
+                print("Rejected columns: ", rejected.index)
 
-        if drop:
             df.drop(rejected.index, axis=1, inplace=True)
 
     if duration_info:
@@ -269,15 +289,15 @@ def aggregate_inspection_results_per_identifier(
     inspections_error_counter = 0
     for identifier_batch in identifier_inspection:
         inspection_results_dict[identifier_batch] = []
-        logger.info("Analyzing inspection identifer batch: %r", identifier_batch)
+        _LOGGER.info("Analyzing inspection identifer batch: %r", identifier_batch)
 
         for n, ids in enumerate(inspection_ids[identifier_batch]):
             current_identifier += 1
-            logger.info(f"Analysis n.{current_identifier}/{number_inspection_ids}")
+            _LOGGER.info(f"Analysis n.{current_identifier}/{number_inspection_ids}")
             if "Dockerfile" in ids:
-                logger.info("Dockerfile")
+                _LOGGER.info("Dockerfile")
             elif "specification" in ids:
-                logger.info("specification")
+                _LOGGER.info("specification")
             else:
                 specification = extract_specification(inspection_batch_result=inspection_batch_data, inspection_id=ids)
                 if specification:
@@ -288,17 +308,17 @@ def aggregate_inspection_results_per_identifier(
                         document["runtime_environment"] = specification["runtime_environment"]
                         # pop build logs to save some memory (not necessary for now)
                         document["build_log"] = None
-                        logger.info(document["datetime"])
+                        _LOGGER.info(document["datetime"])
                         inspection_results_dict[identifier_batch].append(document)
                     except Exception as e:
                         inspections_error_counter += 1
-                        logger.info(e)
+                        _LOGGER.info(e)
                         continue
 
-    logger.info("Total number of inspections considered: %r" % number_inspection_ids)
-    logger.info("Total number of inspections with error: %r" % inspections_error_counter)
+    _LOGGER.info("Total number of inspections considered: %r" % number_inspection_ids)
+    _LOGGER.info("Total number of inspections with error: %r" % inspections_error_counter)
     percentage_error = inspections_error_counter / number_inspection_ids * 100
-    logger.info("Percentage of error in inspection results: %r" % percentage_error)
+    _LOGGER.info("Percentage of error in inspection results: %r" % percentage_error)
 
     return inspection_results_dict
 
@@ -488,7 +508,7 @@ def make_subplots(data: pd.DataFrame, columns: List[str] = None, *, kind: str = 
     index = data.index.droplevel(-1).unique()
 
     if len(index.names) > 2:
-        logger.warning(f"Can only handle hierarchical index of depth <= 2, got {len(index.names)}. Grouping index.")
+        _LOGGER.warning(f"Can only handle hierarchical index of depth <= 2, got {len(index.names)}. Grouping index.")
 
         return make_subplots(group_index(data, range(index.nlevels - 1)), columns, kind=kind, **kwargs)
 
@@ -627,20 +647,20 @@ def show_categories(inspection_df: pd.DataFrame):
 
     results_categories = {}
     for n, idx in enumerate(index.values):
-        logger.info(f"\nClass {n + 1}/{len(index)}")
+        _LOGGER.info(f"\nClass {n + 1}/{len(index)}")
 
         class_results = {}
         if len(index.names) > 1:
             for name, ind in zip(index.names, idx):
-                logger.info(f"{name} : {ind}")
+                _LOGGER.info(f"{name} : {ind}")
                 class_results[name] = ind
         else:
-            logger.info(f"{index.names[0]} : {idx}")
+            _LOGGER.info(f"{index.names[0]} : {idx}")
             class_results[index.names[0]] = idx
         results_categories[n + 1] = class_results
 
         frame = inspection_df.loc[idx]
-        logger.info(f"Number of rows (jobs) is: {frame.shape[0]}")
+        _LOGGER.info(f"Number of rows (jobs) is: {frame.shape[0]}")
 
     return results_categories
 
@@ -653,8 +673,10 @@ def create_inspection_dataframes(inspection_results_dict: dict, duration_info: b
     inspection_df_dict = {}
 
     columns_list = []
+    identifier_counter = 1
+    total_identifier = len(inspection_results_dict)
     for identifier, inspection_results_list in inspection_results_dict.items():
-        logger.info(f"Analyzing inspection batch: {identifier}")
+        _LOGGER.info(f"Analyzing inspection batch: {identifier} ({identifier_counter}/{total_identifier})")
 
         df = process_inspection_results(
             inspection_results_list,
@@ -675,9 +697,10 @@ def create_inspection_dataframes(inspection_results_dict: dict, duration_info: b
             inspection_df_dict[identifier]["build_duration"] = df_duration["build_duration"]
 
         inspections_df = pd.DataFrame(columns=columns_list)
+        identifier_counter += 1
 
     if not inspection_df_dict:
-        logger.info(f"No inspections identified.")
+        _LOGGER.info(f"No inspections identified.")
         return inspection_df_dict, inspections_df
 
     _INSPECTION_PERFORMANCE_VALUES = ["stdout__@result__elapsed", "stdout__@result__rate"]
@@ -807,7 +830,7 @@ def create_filtered_df(
 ) -> pd.DataFrame:
     """Create dataframe using the filters selected for plots."""
     if not df.shape[0]:
-        logger.info("DataFrame provided is empty, nothing can be filtered.")
+        _LOGGER.info("DataFrame provided is empty, nothing can be filtered.")
 
     filters = []
 
@@ -827,9 +850,9 @@ def create_filtered_df(
     filtered_final_df = filter_df(df, filters)
 
     if not filtered_final_df.shape[0]:
-        logger.info("There are no results for the filters selected. Please change filters.")
+        _LOGGER.info("There are no results for the filters selected. Please change filters.")
 
-    logger.info(f"Number of software stacks identified: {filtered_final_df.shape[0]}")
+    _LOGGER.info(f"Number of software stacks identified: {filtered_final_df.shape[0]}")
 
     return filtered_final_df
 
@@ -915,57 +938,74 @@ def create_inspection_3d_plot(plot_df: pd.DataFrame, quantity: str, identifiers_
     iplot(fig, filename="3d-scatter-colorscale")
 
 
-def create_inspection_2d_plot(plot_df: pd.DataFrame, quantity: str, identifiers_inspections: List[str]):
+def create_inspection_2d_plot(
+    plot_df: pd.DataFrame,
+    quantity: str,
+    components: List[str],
+    color_scales: List[str],
+    identifiers_inspections: List[str],
+    have_annotations: bool = False,
+):
     """Create inspection performance parameters plot in 2D.
 
     :param plot_df dataframe for plot of inspections results
     """
     integer_y_encoded = [y[0] for y in plot_df[["sws_hash_id_encoded"]].values]
 
-    Z = [z[0] for z in plot_df[[quantity]].values]
-
-    trace = go.Scatter(
-        x=integer_y_encoded,
-        y=Z,
-        mode="markers",
-        hovertext=[y[0] for y in plot_df[["sws_string"]].values],
-        hoverinfo="text",
-        marker=dict(
-            size=12,
-            color=Z,  # set color to an array/list of desired values
-            colorscale="Viridis",  # choose a colorscale
-            opacity=0.8,
-            showscale=True,
-        ),
-        name="tf=={tensorflow-version}",
-        text=[f"tf{plot_df['tensorflow'].values[p][1]}" for p in range(len(plot_df["tensorflow"].values))],
-        textposition="bottom center",
-    )
-
-    data = [trace]
-
-    annotations2 = []
+    data = []
+    annotations = []
     c = 0
-    for (yr, zr) in zip(integer_y_encoded, Z):
-        annotations2.append(
-            dict(
-                showarrow=False,
-                x=yr,
-                y=zr,
-                text=f"tf{plot_df['tensorflow'].values[c][1]}, " + f"np{plot_df['numpy'].values[c][1]}",
-                xanchor="left",
-                xshift=15,
-                opacity=0.7,
-            )
+    d = 0
+    for component in components:
+        name_component = component
+        if component == "pytorch":
+            name_component = "torch"
+        subset_df = plot_df[plot_df["pi_component"] == component]
+        Z = [z[0] for z in subset_df[[quantity]].values]
+
+        trace = go.Scatter(
+            x=integer_y_encoded,
+            y=Z,
+            mode="markers",
+            hovertext=[y[0] for y in subset_df[["sws_string"]].values],
+            hoverinfo="text",
+            marker=dict(
+                size=12,
+                color=Z,  # set color to an array/list of desired values
+                colorscale=color_scales[c],  # choose a colorscale
+                opacity=0.8,
+                showscale=True,
+                colorbar={"x": 1 + d},
+            ),
+            name=f"{component}==version",
         )
+
+        data.append(trace)
         c += 1
+        d += 0.2
+
+        if have_annotations:
+            for (yr, zr) in zip(integer_y_encoded, Z):
+                annotations.append(
+                    dict(
+                        showarrow=False,
+                        x=yr,
+                        y=zr,
+                        text=f"{name_component}{subset_df[name_component].values[c][1]}, "
+                        + f"np{subset_df[name_component].values[c][1]}",
+                        xanchor="left",
+                        xshift=15,
+                        opacity=0.7,
+                    )
+                )
+
     layout = go.Layout(
-        title=f"PI=Conv2D-tensorflow-{identifiers_inspections}-2Dplot",
+        title=f"PI=Conv2D-{components}-{identifiers_inspections}-2Dplot",
         xaxis=dict(title="Software Stack ID integer encoded"),
         yaxis=dict(title=_PERFORMANCE_QUANTITY_MAP[quantity]),
-        annotations=annotations2,
+        annotations=annotations,
         showlegend=True,
-        legend=dict(orientation="h"),
+        legend=dict(orientation="h", y=-0.3, yanchor="top"),
     )
     fig = go.Figure(data=data, layout=layout)
 
@@ -995,23 +1035,39 @@ def create_inspection_analysis_plots(inspection_df: pd.DataFrame):
     py.iplot(fig)
 
 
-def create_inspection_parameters_dataframes(parameters: List[str], inspection_df_dict: dict) -> Dict[str, pd.DataFrame]:
+def create_inspection_parameters_dataframes(
+    parameters: List[str], inspection_df_dict: dict, component: Optional[str] = None
+) -> Dict[str, pd.DataFrame]:
     """Create pd.DataFrame of selected parameters from inspections results to be used for statistics and error analysis.
 
     It also outputs batches and parameters map that is necessary for plots.
 
     :param parameters: inspection parameters used in the analysis
     :param inspection_df_dict: dictionary with data frame as returned by `process_inspection_results' per identifier.
+    :param component: PI component name (e.g tensorflow, pytorch).
     """
     inspection_parameters_df_dict = {}
 
     for parameter in parameters:
         parameter_df = pd.DataFrame()
 
-        for identifier in list(inspection_df_dict.keys()):
+        for identifier in inspection_df_dict:
             additional = pd.DataFrame()
-            additional[identifier] = inspection_df_dict[identifier][_INSPECTION_MAPPING_PARAMETERS[parameter]].values
-            parameter_df = pd.concat([parameter_df, additional], axis=1)
+            current_inspection_df = inspection_df_dict[identifier]
+
+            if component:
+                filtered_inspection_df = current_inspection_df[
+                    current_inspection_df["stdout__component"].values == component
+                ]
+                data = filtered_inspection_df[_INSPECTION_MAPPING_PARAMETERS[parameter]].values
+
+                if not pd.isnull(data).all():
+                    additional[identifier] = data
+                    parameter_df = pd.concat([parameter_df, additional], axis=1)
+            else:
+                data = current_inspection_df[_INSPECTION_MAPPING_PARAMETERS[parameter]].values
+                additional[identifier] = data
+                parameter_df = pd.concat([parameter_df, additional], axis=1)
 
         inspection_parameters_df_dict[parameter] = parameter_df
 
@@ -1050,12 +1106,27 @@ def evaluate_statistics(inspection_df: pd.DataFrame, inspection_parameter: str) 
     }
 
 
-def evaluate_inspection_statistics(parameters: list, inspection_df_dict: dict) -> dict:
+def evaluate_inspection_statistics(parameters: list, inspection_df_dict: dict, component: Optional[str] = None) -> dict:
     """Aggregate statistical quantities per inspection parameter for inspection batches.
 
     :param parameters: inspection parameters used in the analysis
     :param inspection_df_dict: dictionary with data frame as returned by `process_inspection_results' per identifier
     """
+    _STATISTICAL_PARAMETERS = [
+        "cv_mean",
+        "cv_median",
+        "cv_q1",
+        "cv_q3",
+        "std_error",
+        "std",
+        "median",
+        "q1",
+        "q3",
+        "iqr",
+        "max",
+        "min",
+    ]
+
     inspection_statistics_dict = {}
 
     for parameter in parameters:
@@ -1063,23 +1134,23 @@ def evaluate_inspection_statistics(parameters: list, inspection_df_dict: dict) -
 
         evaluated_statistics = {}
 
-        for identifier in list(inspection_df_dict.keys()):
-            result = evaluate_statistics(
-                inspection_df=inspection_df_dict[identifier],
-                inspection_parameter=_INSPECTION_MAPPING_PARAMETERS[parameter],
-            )
-            s_parameters = result.keys()
+        for identifier in inspection_df_dict:
+            current_inspection_df = inspection_df_dict[identifier]
+            if component:
+                filtered_inspection_df = current_inspection_df[
+                    current_inspection_df["stdout__component"].values == component
+                ]
+                result = evaluate_statistics(
+                    inspection_df=filtered_inspection_df, inspection_parameter=_INSPECTION_MAPPING_PARAMETERS[parameter]
+                )
 
-            if any(math.isnan(p) for p in result.values()):
-                print(result)
-                pass
-            else:
-                IDENTIFIER_INSPECTIONS_REDUCED.append(identifier)
-                evaluated_statistics[identifier] = result
+                if not any(math.isnan(p) for p in result.values()):
+                    IDENTIFIER_INSPECTIONS_REDUCED.append(identifier)
+                    evaluated_statistics[identifier] = result
 
         aggregated_statistics = {}
 
-        for statistical_quantity in s_parameters:
+        for statistical_quantity in _STATISTICAL_PARAMETERS:
             aggregated_statistics[statistical_quantity] = [
                 values[statistical_quantity] for values in evaluated_statistics.values()
             ]
@@ -1095,17 +1166,18 @@ def plot_interpolated_statistics_of_inspection_parameters(
     inspection_parameters: List[str],
     colour_list: List[str],
     statistical_quantities: List[str],
-    title_plot: str = " ",
-    title_xlabel: str = " ",
-    title_ylabel: str = " ",
+    title_plot: Optional[str] = None,
+    title_xlabel: Optional[str] = None,
+    title_ylabel: Optional[str] = None,
     save_result: bool = False,
-    project_folder: str = "",
-    folder_name: str = "",
+    project_folder: Optional[str] = None,
+    folder_name: Optional[str] = None,
+    componet: Optional[str] = None,
 ):
     """Plot interpolated statistical quantity/ies of inspection parameter/s from different inspection batches."""
     if len(inspection_parameters) == 1 and len(statistical_quantities) > 1:
         if len(colour_list) != len(statistical_quantities):
-            logger.warning(f"List of statistical quantities and List of colours shall have the same length!")
+            _LOGGER.warning(f"List of statistical quantities and List of colours shall have the same length!")
 
         parameter_results = statistical_results_dict[inspection_parameters[0]]
 
@@ -1113,11 +1185,12 @@ def plot_interpolated_statistics_of_inspection_parameters(
             plt.plot(identifier_inspection_list, parameter_results[quantity], f"{colour_list[i]}o-", label=quantity)
             i += 1
 
-        plt.title(title_plot)
+        if title_plot:
+            plt.title(title_plot)
 
     elif len(inspection_parameters) > 1 and len(statistical_quantities) == 1:
         if len(inspection_parameters) != len(colour_list):
-            logger.warning(f"List of inspection parameters and List of colours shall have the same length!")
+            _LOGGER.warning(f"List of inspection parameters and List of colours shall have the same length!")
 
         for i, parameter in enumerate(inspection_parameters):
             parameter_results = statistical_results_dict[parameter]
@@ -1133,7 +1206,7 @@ def plot_interpolated_statistics_of_inspection_parameters(
 
     elif len(inspection_parameters) == 1 and len(statistical_quantities) == 1:
         if len(colour_list) != len(statistical_quantities):
-            logger.warning(f"List of statistical quantities and List of colours shall have the same length!")
+            _LOGGER.warning(f"List of statistical quantities and List of colours shall have the same length!")
 
         parameter_results = statistical_results_dict[inspection_parameters[0]]
 
@@ -1144,37 +1217,41 @@ def plot_interpolated_statistics_of_inspection_parameters(
         plt.title(title_plot)
 
     else:
-        logger.warning(
+        _LOGGER.warning(
             """Combinations allowed:
                 - single inspection parameter | single or multiple statistical quantity/ies
                 - single or multiple inspection parameter/s | single statistical quantity
             """
         )
 
-    plt.xlabel(title_xlabel)
-    plt.ylabel(title_ylabel)
+    if title_xlabel:
+        plt.xlabel(title_xlabel)
+
+    if title_ylabel:
+        plt.ylabel(title_ylabel)
+
     plt.tick_params(axis="x", rotation=45)
     plt.legend()
 
     if save_result:
 
-        if project_folder != "":
+        if project_folder:
             current_path = Path.cwd()
             project_dir_path = current_path.joinpath(project_folder)
 
-            logger.info("Creating Project folder (if not already created!!)")
+            _LOGGER.info("Creating Project folder (if not already created!!)")
             os.makedirs(project_dir_path, exist_ok=True)
 
-            if folder_name != "":
+            if folder_name:
                 new_dir_path = project_dir_path.joinpath(folder_name)
-                logger.info("Creating sub-folder (if not already created!!)")
+                _LOGGER.info("Creating sub-folder (if not already created!!)")
                 os.makedirs(new_dir_path, exist_ok=True)
                 plt.savefig(f"{new_dir_path}/{title_plot}_static.png", bbox_inches="tight")
 
             else:
                 plt.savefig(f"{project_dir_path}/{title_plot}_static.png", bbox_inches="tight")
         else:
-            logger.warning("No project folder name provided!!")
+            _LOGGER.warning("No project folder name provided!!")
 
     plt.show()
 
@@ -1259,7 +1336,7 @@ def create_scatter_and_correlation(
 
     for correlation_type in ["pearson", "spearman", "kendall"]:
         correlation_matrix = data[columns].corr(correlation_type)
-        logger.debug(f"\n{correlation_type} correlation results:\n{correlation_matrix}")
+        _LOGGER.debug(f"\n{correlation_type} correlation results:\n{correlation_matrix}")
 
     return figure
 
@@ -1277,7 +1354,7 @@ def create_plot_multiple_batches(
 ):
     """Create (Histogram or Box) plot using several columns of the dataframe(static as default)."""
     number_plots = data[quantity].shape[1]
-    logger.info(f"Number of plots created: {number_plots}")
+    _LOGGER.info(f"Number of plots created: {number_plots}")
     if not static:
 
         if plot_type == "box":
@@ -1291,13 +1368,13 @@ def create_plot_multiple_batches(
             )
 
         if save_result:
-            logger.warning("Save figure: Not provided for interactive plot yet!!")
+            _LOGGER.warning("Save figure: Not provided for interactive plot yet!!")
         return fig
 
     i = 0
     for column_name in data[quantity].columns.values:
         plt.figure(i)
-        logger.info(f"Creating {column_name}")
+        _LOGGER.info(f"Creating {column_name}")
         px = data[quantity][column_name].plot(kind=plot_type, title=f"Histogram {quantity} for{column_name}")
         px.set_xlabel(x_label)
         px.set_ylabel(y_label)
@@ -1309,12 +1386,12 @@ def create_plot_multiple_batches(
                 current_path = Path.cwd()
                 project_dir_path = current_path.joinpath(project_folder)
 
-                logger.info("Creating Project folder (if not already created!!)")
+                _LOGGER.info("Creating Project folder (if not already created!!)")
                 os.makedirs(project_dir_path, exist_ok=True)
 
                 if folder_name != "":
                     new_dir_path = project_dir_path.joinpath(folder_name)
-                    logger.info("Creating sub-folder (if not already created!!)")
+                    _LOGGER.info("Creating sub-folder (if not already created!!)")
                     os.makedirs(new_dir_path, exist_ok=True)
                     fig = px.get_figure()
                     fig.savefig(f"{new_dir_path}/{plot_type}_{quantity}_{column_name}_static.png", bbox_inches="tight")
@@ -1343,7 +1420,7 @@ def create_plot_from_df(
     """Create plot using two columns of the DataFrame."""
     columns = columns if columns is not None else data[columns].columns
     if len(columns) > 2:
-        logger.exception("Only two columns can be used!!")
+        _LOGGER.exception("Only two columns can be used!!")
 
     if not static:
 
@@ -1359,7 +1436,7 @@ def create_plot_from_df(
         iplot(fig)
 
         if save_result:
-            logger.warning("Save figure: Not provided for interactive plot yet!!")
+            _LOGGER.warning("Save figure: Not provided for interactive plot yet!!")
         return fig
 
     if scatter:
@@ -1376,12 +1453,12 @@ def create_plot_from_df(
             current_path = Path.cwd()
             project_dir_path = current_path.joinpath(project_folder)
 
-            logger.info("Creating Project folder (if not already created!!)")
+            _LOGGER.info("Creating Project folder (if not already created!!)")
             os.makedirs(project_dir_path, exist_ok=True)
 
             if folder_name != "":
                 new_dir_path = project_dir_path.joinpath(folder_name)
-                logger.info("Creating sub-folder (if not already created!!)")
+                _LOGGER.info("Creating sub-folder (if not already created!!)")
                 os.makedirs(new_dir_path, exist_ok=True)
                 fig = px.get_figure()
                 fig.savefig(f"{new_dir_path}/{title_plot}_static.png", bbox_inches="tight")
@@ -1390,7 +1467,7 @@ def create_plot_from_df(
                 fig = px.get_figure()
                 fig.savefig(f"{project_dir_path}/{title_plot}_static.png", bbox_inches="tight")
         else:
-            logger.warning("No project folder name provided!!")
+            _LOGGER.warning("No project folder name provided!!")
 
 
 def create_multiple_violin_plot(
@@ -1407,7 +1484,7 @@ def create_multiple_violin_plot(
     i = 0
     for column_name in data[quantity].columns.values:
         plt.figure(i)
-        logger.info(f"Creating {column_name}")
+        _LOGGER.info(f"Creating {column_name}")
         ax = sns.violinplot(data=data[quantity][column_name], linewidth=linewidth)
         ax.tick_params(axis="x")
         ax.set(xlabel=x_label, ylabel=y_label, title=f"Violin plot {quantity} for{column_name}")
@@ -1418,12 +1495,12 @@ def create_multiple_violin_plot(
                 current_path = Path.cwd()
                 project_dir_path = current_path.joinpath(project_folder)
 
-                logger.info("Creating Project folder (if not already created!!)")
+                _LOGGER.info("Creating Project folder (if not already created!!)")
                 os.makedirs(project_dir_path, exist_ok=True)
 
                 if folder_name != "":
                     new_dir_path = project_dir_path.joinpath(folder_name)
-                    logger.info("Creating sub-folder (if not already created!!)")
+                    _LOGGER.info("Creating sub-folder (if not already created!!)")
                     os.makedirs(new_dir_path, exist_ok=True)
                     fig = ax.get_figure()
                     fig.savefig(f"{new_dir_path}/Violin_plot_{quantity}_{column_name}_static.png", bbox_inches="tight")
@@ -1435,9 +1512,8 @@ def create_multiple_violin_plot(
                     )
 
             else:
-                logger.warning("No project folder name provided!!")
+                _LOGGER.warning("No project folder name provided!!")
 
-    plt.close()
     i += 1
 
 
@@ -1456,7 +1532,7 @@ def columns_to_analyze(
     high = len(df)
 
     # Groups every column by unique values
-    logger.info("#### Columns to analyze, Unique Value Count")
+    _LOGGER.info("#### Columns to analyze, Unique Value Count")
     for i in df:
         try:
             value_count = len(df.groupby(i).count())
@@ -1481,7 +1557,7 @@ def columns_to_analyze(
     # Filters data frame to columns with distinct value counts within the limit
     df_analyze = df[lst_columns_to_analyze]
     if display_clusters is True:
-        logger.info("#### Inspection result count organized by parameter + parameter values")
+        _LOGGER.info("#### Inspection result count organized by parameter + parameter values")
         try:
             for i in display_jobs_by_subcategories(df_analyze):
                 display(i)
@@ -1489,10 +1565,10 @@ def columns_to_analyze(
             pass
     if cluster_by_hue is True:
         if (low > 0) and (high < 100):
-            logger.info("#### Distribution of parameters to analyze organized by hues")
+            _LOGGER.info("#### Distribution of parameters to analyze organized by hues")
             plot_subcategories_by_hues(df_analyze, df, "status__job__duration")
         else:
-            logger.info("##### Parameter variance too large to plot by hue/color")
+            _LOGGER.info("##### Parameter variance too large to plot by hue/color")
 
     # In addition to printing, function returns dataframe with results that fall within the limits
 
@@ -1759,7 +1835,7 @@ def process_empty_or_mutable_parameters(inspection_df: pd.DataFrame):
 
             # Columns with no data
             if value_count == 0:
-                print(i, value_count)
+                _LOGGER.info(i, value_count)
                 list_of_unhashable_none_values.append(i)
         except TypeError:
             # Groups every column by unique values if values are in list or dict formats
@@ -1767,13 +1843,13 @@ def process_empty_or_mutable_parameters(inspection_df: pd.DataFrame):
                 # If values are type list checks uniqueness
                 value_count = len(pd.Series(inspection_df[i].values).apply(tuple).unique())
                 list_of_unhashable_none_values.append(i)
-                print(i, value_count)
+                _LOGGER.info(i, value_count)
             except TypeError:
                 # If values are type dict checks uniqueness
                 lst_new = list(inspection_df[i].values)
                 value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1:]])
                 list_of_unhashable_none_values.append(i)
-                print(i, value_count)
+                _LOGGER.info(i, value_count)
     return inspection_df.drop(list_of_unhashable_none_values, axis=1)
 
 
@@ -1806,15 +1882,15 @@ def show_unique_value_count_by_feature_class(processed_df: pd.DataFrame):
         # Groupby to get unique value count for feature class
         try:
             group = processed_df.groupby(list_of_parameters_per_feature).size()
-            logger.info("#### {} {}".format(j, len(group)))
+            _LOGGER.info("#### {} {}".format(j, len(group)))
 
             # Groupby to get unique value count for each dataframe column
             for l in list_of_parameters_per_feature:
-                logger.info(l, len(processed_df.groupby(l).size()))
+                _LOGGER.info(l, len(processed_df.groupby(l).size()))
 
         except (TypeError, ValueError) as e:
-            logger.warning(e)
-            logger.warning("Parameter does not have any values. Filter these out first")
+            _LOGGER.warning(e)
+            _LOGGER.warning("Parameter does not have any values. Filter these out first")
 
 
 def dataframe_statistics(inspection_df: pd.DataFrame, plot_title: str):
@@ -1824,14 +1900,14 @@ def dataframe_statistics(inspection_df: pd.DataFrame, plot_title: str):
     :param plot_title: title of fit plot
     """
     # Measure of skew and kurtosis for job and build duration
-    logger.info("#### Skew and kurtosis statistics")
-    logger.info(f"Job Duration Skew: {inspection_df['status__job__duration'].skew(axis=0, skipna=True)}")
-    logger.info(f"Build Duration Skew:: {inspection_df['status__build__duration'].skew(axis=0, skipna=True)}")
-    logger.info(f"Job Duration Kurtosis: {inspection_df['status__job__duration'].kurt(axis=0, skipna=True)}")
-    logger.info(f"Build Duration Kurtosis: {inspection_df['status__build__duration'].kurt(axis=0, skipna=True)}")
+    _LOGGER.info("#### Skew and kurtosis statistics")
+    _LOGGER.info(f"Job Duration Skew: {inspection_df['status__job__duration'].skew(axis=0, skipna=True)}")
+    _LOGGER.info(f"Build Duration Skew:: {inspection_df['status__build__duration'].skew(axis=0, skipna=True)}")
+    _LOGGER.info(f"Job Duration Kurtosis: {inspection_df['status__job__duration'].kurt(axis=0, skipna=True)}")
+    _LOGGER.info(f"Build Duration Kurtosis: {inspection_df['status__build__duration'].kurt(axis=0, skipna=True)}")
 
     # Statistics for job duration, build duration, and elapsed time
-    logger.info("#### Duration statistics")
+    _LOGGER.info("#### Duration statistics")
     df_stats = pd.DataFrame((inspection_df["status__job__duration"].describe()))
     df_stats["status__build__duration"] = inspection_df["status__build__duration"].describe()
     df_stats["job_log__stdout__@result__elapsed"] = (
@@ -1842,7 +1918,7 @@ def dataframe_statistics(inspection_df: pd.DataFrame, plot_title: str):
     # Plotting of job duration and build duration with fit
     g = sns.distplot(inspection_df["status__job__duration"], kde=True)
     g.set_title("Job Duration: {}".format(plot_title))
-    logger.info("#### Job and build distribution plots, scatter plots, autocorrelation plots")
+    _LOGGER.info("#### Job and build distribution plots, scatter plots, autocorrelation plots")
     plt.figure()
     g2 = sns.distplot(inspection_df["status__build__duration"], kde=True)
     g2.set_title("Build Duration: {}".format(plot_title))

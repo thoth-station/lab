@@ -4,5 +4,5 @@ from .utils import obtain_location
 from .graph import GraphQueryResult
 from .utils import packages_info
 
-__title__ = 'thoth-lab'
+__title__ = "thoth-lab"
 __version__ = "0.1.11"

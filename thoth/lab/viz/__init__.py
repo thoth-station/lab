@@ -14,11 +14,9 @@ from jupyter_require.core import load_css
 _THIS_DIR = Path(__file__).parent
 
 _DEFAULT_CSS_DIR = _THIS_DIR / Path("assets/css")
-_DEFAULT_CONFIG = {
-    'd3': 'https://d3js.org/d3.v5.min',
-}
+_DEFAULT_CONFIG = {"d3": "https://d3js.org/d3.v5.min"}
 
-REQUIRED_LIBRARIES: set = {'d3'}
+REQUIRED_LIBRARIES: set = {"d3"}
 
 
 def init_notebook_mode(custom_css: list = None, custom_libs: dict = None, reload=False):
@@ -50,19 +48,15 @@ def init_notebook_mode(custom_css: list = None, custom_libs: dict = None, reload
     REQUIRED_LIBRARIES.update(config.keys())
 
     # required styles
-    style_css = '\n'.join([
-        f"{css_file.read_text()}"
-        for css_file in _DEFAULT_CSS_DIR.iterdir()
-    ])
+    style_css = "\n".join([f"{css_file.read_text()}" for css_file in _DEFAULT_CSS_DIR.iterdir()])
 
     link_css(
-        'https://use.fontawesome.com/releases/v5.7.2/css/all.css',
+        "https://use.fontawesome.com/releases/v5.7.2/css/all.css",
         dict(
-            integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr",
-            crossorigin="anonymous"
-        )
+            integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr", crossorigin="anonymous"
+        ),
     )
-    load_css(style_css, {'id': 'thoth-lab-stylesheet'})
+    load_css(style_css, {"id": "thoth-lab-stylesheet"})
 
     # custom css links
     for stylesheet in custom_css or []:
@@ -72,33 +66,26 @@ def init_notebook_mode(custom_css: list = None, custom_libs: dict = None, reload
     return require.config(config)
 
 
-def plot(data: pd.DataFrame,
-         kind: str = 'diagonal',
-         layout: str = 'tree',
-         **kwargs):
+def plot(data: pd.DataFrame, kind: str = "diagonal", layout: str = "tree", **kwargs):
     """Syntactic sugar which wraps static plot visualizations."""
     js: str = _get_js_template(kind, static=True)
 
     return execute_with_requirements(
-        js, required=list(REQUIRED_LIBRARIES),
-        data=data.to_csv(index=False), layout=layout, **kwargs)
+        js, required=list(REQUIRED_LIBRARIES), data=data.to_csv(index=False), layout=layout, **kwargs
+    )
 
 
-def iplot(data: pd.DataFrame,
-          kind: str = 'diagonal',
-          layout: str = 'tree',
-          **kwargs):
+def iplot(data: pd.DataFrame, kind: str = "diagonal", layout: str = "tree", **kwargs):
     """Syntactic sugar which wraps dynamic plot visualizations."""
     js: str = _get_js_template(kind, static=False)
 
     return execute_with_requirements(
-        js, required=list(REQUIRED_LIBRARIES),
-        data=data.to_csv(index=False), layout=layout, **kwargs)
+        js, required=list(REQUIRED_LIBRARIES), data=data.to_csv(index=False), layout=layout, **kwargs
+    )
 
 
 def _get_js_template(kind: str, static: bool = True) -> str:
     """Return string template of JS script."""
-    script_path = _THIS_DIR / Path(
-        f"assets/js/{['dynamic', 'static'][static]}/{kind}.js")
+    script_path = _THIS_DIR / Path(f"assets/js/{['dynamic', 'static'][static]}/{kind}.js")
 
     return script_path.read_text()

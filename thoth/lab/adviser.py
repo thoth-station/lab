@@ -82,7 +82,7 @@ def aggregate_adviser_results(adviser_version: str, limit_results: bool = False,
                     "justification": [{"message": error_msg, "type": "ERROR"}],
                     "error": error,
                     "message": error_msg,
-                    "type": "ERROR"
+                    "type": "ERROR",
                 }
             else:
                 adviser_dict = extract_adviser_justifications(report=report, adviser_dict=adviser_dict, ids=ids)
@@ -138,14 +138,14 @@ def extract_justifications_from_products(
                         "justification": justification,
                         "error": True,
                         "message": justification["advisory"],
-                        "type": "INFO"
+                        "type": "INFO",
                     }
                 else:
                     adviser_dict[ids] = {
                         "justification": justification,
                         "error": False,
                         "message": justification["message"],
-                        "type": justification["type"]
+                        "type": justification["type"],
                     }
 
     return adviser_dict
@@ -195,7 +195,7 @@ def create_adviser_results_histogram(plot_df: pd.DataFrame):
                 "jm_hash_id_encoded": f"type-{encoded_id}",
                 "message": row["message"],
                 "type": row["type"],
-                "count": plot_df["jm_hash_id_encoded"].value_counts()[encoded_id]
+                "count": plot_df["jm_hash_id_encoded"].value_counts()[encoded_id],
             }
 
     justifications_df = pd.DataFrame(histogram_data)
@@ -218,12 +218,7 @@ def create_adviser_results_histogram(plot_df: pd.DataFrame):
 
     data = [trace1]
 
-    margin = {
-        "l": 0,
-        "r": 0,
-        "b": 0,
-        "t": 0,
-    }
+    margin = {"l": 0, "r": 0, "b": 0, "t": 0}
 
     layout = go.Layout(
         title="Adviser justifications",
@@ -268,7 +263,7 @@ def _aggregate_data_per_interval(adviser_justification_df: pd.DataFrame, interva
                 aggregated_data[high][encoded_id] = {
                     "jm_hash_id_encoded": f"type-{encoded_id}",
                     "message": row["message"],
-                    "count": subset_df["jm_hash_id_encoded"].value_counts()[encoded_id]
+                    "count": subset_df["jm_hash_id_encoded"].value_counts()[encoded_id],
                 }
 
     return aggregated_data
@@ -295,9 +290,7 @@ def _create_heatmaps_values(input_data: dict, advise_encoded_type: List[int]):
     return heatmaps_values
 
 
-def create_adviser_heatmap(
-    adviser_justification_df: pd.DataFrame, save_result: bool = False, output_dir: str = ""
-):
+def create_adviser_heatmap(adviser_justification_df: pd.DataFrame, save_result: bool = False, output_dir: str = ""):
     """Create adviser justifications heatmap plot.
 
     :param adviser_justification_df: data frame as returned by `create_final_dataframe' per identifier.

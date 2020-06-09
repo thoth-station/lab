@@ -24,8 +24,11 @@ import pandas as pd
 from pathlib import Path
 
 from thoth.storages import SolverResultsStore
+from .common import _aggregate_thoth_results
 
 _LOGGER = logging.getLogger("thoth.lab.solver")
+
+logging.basicConfig(level=logging.INFO)
 
 
 def aggregate_solver_results(
@@ -38,41 +41,13 @@ def aggregate_solver_results(
     :param is_local: flag to retreive the dataset locally or from S3 (credentials are required)
     :param solver_repo_path: required if you want to retrieve the solver dataset locally and `is_local` is set to True
     """
-    if limit_results:
-        _LOGGER.debug(f"Limiting results to {max_ids} to test functions!!")
-
-    solver_reports = []
-    c_s = 1
-
-    if not is_local:
-        solver_store = SolverResultsStore()
-        solver_store.connect()
-
-        for solver_id in solver_store.get_document_listing():
-            _LOGGER.debug("Document n. %r", c_s)
-            _LOGGER.debug(solver_id)
-
-            solver_report = solver_store.retrieve_document(document_id=solver_id)
-
-            solver_reports.append(solver_report)
-
-            c_s += 1
-
-    elif is_local:
-        _LOGGER.debug(f"Retrieving solver dataset at path... {solver_repo_path}")
-        if not solver_repo_path.exists():
-            raise Exception("There is no dataset at this path")
-
-        for solver_document_path in solver_repo_path.iterdir():
-            _LOGGER.debug(solver_document_path)
-
-            with open(solver_document_path, "r") as solver_json:
-                solver_report = json.load(solver_json)
-
-            solver_reports.append(solver_report)
-        c_s += 1
-
-    _LOGGER.debug("Number of Solver reports retrieved is: %r" % c_s)
+    solver_reports = _aggregate_thoth_results(
+        limit_results=limit_results,
+        max_ids=max_ids,
+        is_local=is_local,
+        repo_path=solver_repo_path,
+        store=SolverResultsStore,
+    )
 
     return solver_reports
 
