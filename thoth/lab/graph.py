@@ -99,7 +99,7 @@ class GraphQueryResult(object):
         """Serialize the output of graph query."""
         # It should be fine to just use one check for nested parts. We can extend this later on.
         def _serialize(obj):
-            if hasattr(obj, 'to_dict'):
+            if hasattr(obj, "to_dict"):
                 return obj.to_dict()
             return obj
 
