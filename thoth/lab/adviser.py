@@ -27,6 +27,7 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 import plotly
 import plotly.graph_objs as go
@@ -34,7 +35,7 @@ from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 
 from pathlib import Path
 from datetime import datetime
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Optional
 
 from numpy import array
 from sklearn.preprocessing import LabelEncoder
@@ -49,8 +50,8 @@ def aggregate_adviser_results(adviser_version: str, limit_results: bool = False,
     """Aggregate adviser results from jsons stored in Ceph.
 
     :param adviser_version: minimum adviser version considered for the analysis of adviser runs
-    :param limit_results: reduce the number of inspection batch ids considered to `max_ids` to test analysis
-    :param max_ids: maximum number of inspection batch ids considered
+    :param limit_results: reduce the number of adviser runs ids considered to `max_ids` to test analysis
+    :param max_ids: maximum number of adviser runs ids considered
     """
     adviser_store = AdvisersResultsStore()
     adviser_store.connect()
@@ -175,9 +176,12 @@ def create_final_dataframe(adviser_dataframe: pd.DataFrame) -> pd.DataFrame:
 
     justification_result["jm_hash_id_encoded"] = {el[0]: el[3] for el in jm_encoding}
 
-    final_dataframe = pd.DataFrame(justification_result)
+    total_dataframe = pd.DataFrame(justification_result)
 
-    return final_dataframe
+    info_dataframe = total_dataframe[total_dataframe["type"] == "INFO"]
+    error_dataframe = total_dataframe[total_dataframe["type"] == "ERROR"]
+
+    return total_dataframe, info_dataframe, error_dataframe
 
 
 def create_adviser_results_histogram(plot_df: pd.DataFrame):
@@ -235,14 +239,15 @@ def create_adviser_results_histogram(plot_df: pd.DataFrame):
     return justifications_df
 
 
-def _aggregate_data_per_interval(adviser_justification_df: pd.DataFrame, intervals: int = 10):
-    """Aggregate advise justifications per time intervals."""
+def _aggregate_data_per_interval(adviser_justification_df: pd.DataFrame):
+    """Aggregate advise justifications per weekly time intervals."""
     begin = min(adviser_justification_df["date"].values)
     end = max(adviser_justification_df["date"].values)
     timestamps = []
-    delta = (end - begin) / intervals
+    delta = np.timedelta64(7, 'D')
+    intervals = (end - begin) / delta
     value = begin
-    for i in range(1, intervals + 1):
+    for i in range(1, int(intervals) + 1):
         value = value + delta
         timestamps.append(value)
     timestamps[0] = begin
@@ -290,10 +295,16 @@ def _create_heatmaps_values(input_data: dict, advise_encoded_type: List[int]):
     return heatmaps_values
 
 
-def create_adviser_heatmap(adviser_justification_df: pd.DataFrame, save_result: bool = False, output_dir: str = ""):
+def create_adviser_heatmap(
+    adviser_justification_df: pd.DataFrame,
+    file_name: Optional[str] = None,
+    save_result: bool = False,
+    output_dir: Optional[str] = None,
+):
     """Create adviser justifications heatmap plot.
 
     :param adviser_justification_df: data frame as returned by `create_final_dataframe' per identifier.
+    :param file_name: file name used in the name of files saved
     :param save_result: resulting plots created are stored in `output_dir`.
     :param output_dir: output directory where plots are stored if `save_results` is set to True.
     """
@@ -325,14 +336,21 @@ def create_adviser_heatmap(adviser_justification_df: pd.DataFrame, save_result: 
     plt.show()
 
     if save_result:
-        if output_dir != "":
+        if output_dir:
             current_path = Path.cwd()
             project_dir_path = current_path.joinpath(output_dir)
 
             os.makedirs(project_dir_path, exist_ok=True)
-
+            if not file_name:
+                file_name = ""
             fig = ax.get_figure()
-            fig.savefig(f"{project_dir_path}/Adviser_justifications_{datetime.now()}.png", bbox_inches="tight")
+            if not file_name:
+                file_name = ""
+
+            fig.savefig(
+                f"{project_dir_path}/Adviser_justifications_{file_name}_{datetime.utcnow()}.png",
+                bbox_inches="tight"
+            )
 
     plt.close()
     return df_heatmap
