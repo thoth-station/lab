@@ -68,35 +68,39 @@ def aggregate_adviser_results(adviser_version: str, limit_results: bool = False,
         _LOGGER.debug(f"Limiting results to {max_ids} to test functions!!")
 
     for n, ids in enumerate(adviser_ids):
-        document = adviser_store.retrieve_document(ids)
-        datetime_advise_run = document["metadata"].get("datetime")
-        analyzer_version = document["metadata"].get("analyzer_version")
-        _LOGGER.debug(f"Analysis n.{current_a_counter}/{number_adviser_results}")
-        result = document["result"]
-        _LOGGER.debug(ids)
-        if int("".join(analyzer_version.split("."))) >= int("".join(adviser_version.split("."))):
-            report = result.get("report")
-            error = result["error"]
-            if error:
-                error_msg = result["error_msg"]
-                adviser_dict[ids] = {
-                    "justification": [{"message": error_msg, "type": "ERROR"}],
-                    "error": error,
-                    "message": error_msg,
-                    "type": "ERROR",
-                }
-            else:
-                adviser_dict = extract_adviser_justifications(report=report, adviser_dict=adviser_dict, ids=ids)
+        try:
+            document = adviser_store.retrieve_document(ids)
+            datetime_advise_run = document["metadata"].get("datetime")
+            analyzer_version = document["metadata"].get("analyzer_version")
+            _LOGGER.debug(f"Analysis n.{current_a_counter}/{number_adviser_results}")
+            result = document["result"]
+            _LOGGER.debug(ids)
+            if int("".join(analyzer_version.split("."))) >= int("".join(adviser_version.split("."))):
+                report = result.get("report")
+                error = result["error"]
+                if error:
+                    error_msg = result["error_msg"]
+                    adviser_dict[ids] = {
+                        "justification": [{"message": error_msg, "type": "ERROR"}],
+                        "error": error,
+                        "message": error_msg,
+                        "type": "ERROR"
+                    }
+                else:
+                    adviser_dict = extract_adviser_justifications(report=report, adviser_dict=adviser_dict, ids=ids)
 
-        if ids in adviser_dict.keys():
-            adviser_dict[ids]["datetime"] = datetime.strptime(datetime_advise_run, "%Y-%m-%dT%H:%M:%S.%f")
-            adviser_dict[ids]["analyzer_version"] = analyzer_version
+            if ids in adviser_dict.keys():
+                adviser_dict[ids]["datetime"] = datetime.strptime(datetime_advise_run, "%Y-%m-%dT%H:%M:%S.%f")
+                adviser_dict[ids]["analyzer_version"] = analyzer_version
 
-        current_a_counter += 1
+            current_a_counter += 1
 
-        if limit_results:
-            if current_a_counter > max_ids:
-                return _create_adviser_dataframe(adviser_dict)
+            if limit_results:
+                if current_a_counter > max_ids:
+                    return _create_adviser_dataframe(adviser_dict)
+
+        except Exception as e:
+            _LOGGER.warning(e)
 
     return _create_adviser_dataframe(adviser_dict)
 
