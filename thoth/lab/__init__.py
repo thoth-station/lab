@@ -5,4 +5,4 @@ from .graph import GraphQueryResult
 from .utils import packages_info
 
 __title__ = "thoth-lab"
-__version__ = "0.1.11"
+__version__ = "0.1.12"
