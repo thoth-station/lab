@@ -76,6 +76,9 @@ def _aggregate_thoth_results(
 
             files.append(report)
 
+            if counter == max_ids:
+                return files
+
             counter += 1
 
     elif is_local:
@@ -109,6 +112,10 @@ def _aggregate_thoth_results(
 
                             json_file["identifier"] = main_repo.stem
                             files[str(main_repo)].append(json_file)
+
+                            if counter == max_ids:
+                                return files
+
                             counter += 1
 
             else:
@@ -117,6 +124,9 @@ def _aggregate_thoth_results(
                     json_file = json.load(json_file_type)
 
                 files.append(json_file)
+
+                if counter == max_ids:
+                    return files
 
                 counter += 1
 
