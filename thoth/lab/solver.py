@@ -24,7 +24,7 @@ import pandas as pd
 from pathlib import Path
 
 from thoth.storages import SolverResultsStore
-from .common import _aggregate_thoth_results
+from .common import aggregate_thoth_results
 
 _LOGGER = logging.getLogger("thoth.lab.solver")
 
@@ -41,7 +41,7 @@ def aggregate_solver_results(
     :param is_local: flag to retreive the dataset locally or from S3 (credentials are required)
     :param solver_repo_path: required if you want to retrieve the solver dataset locally and `is_local` is set to True
     """
-    solver_reports = _aggregate_thoth_results(
+    solver_reports = aggregate_thoth_results(
         limit_results=limit_results,
         max_ids=max_ids,
         is_local=is_local,

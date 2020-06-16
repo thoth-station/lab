@@ -27,7 +27,7 @@ from plotly import graph_objs as go
 from plotly.offline import iplot
 
 # from thoth.storages import SIBanditResultsStore, SIClocResultsStore
-from .common import _aggregate_thoth_results
+from .common import aggregate_thoth_results
 from typing import List, Optional, Tuple, Dict
 
 from thoth.storages import SIBanditResultsStore
@@ -48,14 +48,14 @@ class SIBandit:
         is_local: bool = True,
         security_indicator_bandit_repo_path: Path = Path("security/si-bandit"),
     ) -> list:
-        """Aggregate security_indicator_bandit results from jsons stored in Ceph or locally from `security_indicator_bandit` repo.
+        """Aggregate si_bandit results from jsons stored in Ceph or locally from `si_bandit` repo.
 
-        :param limit_results: reduce the number of security_indicator_bandit reports ids considered to `max_ids` to test analysis
-        :param max_ids: maximum number of security_indicator_bandit reports ids considered
+        :param limit_results: reduce the number of si_bandit reports ids considered to `max_ids` to test analysis
+        :param max_ids: maximum number of si_bandit reports ids considered
         :param is_local: flag to retreive the dataset locally or from S3 (credentials are required)
-        :param security_indicator_bandit_repo_path: path to retrieve the security_indicator_bandit dataset locally and `is_local` is set to True
+        :param si_bandit_repo_path: path to retrieve the si_bandit dataset locally and `is_local` is set to True
         """
-        security_indicator_bandit_reports = _aggregate_thoth_results(
+        security_indicator_bandit_reports = aggregate_thoth_results(
             limit_results=limit_results,
             max_ids=max_ids,
             is_local=is_local,
@@ -81,7 +81,7 @@ class SIBandit:
         return extracted_metadata
 
     def create_si_bandit_metadata_dataframe(self, si_bandit_report: dict) -> pd.DataFrame:
-        """ Create si-bandit report metadata dataframe."""
+        """Create si-bandit report metadata dataframe."""
         metadata_si_bandit = self.extract_data_from_si_bandit_metadata(report_metadata=si_bandit_report["metadata"])
         metadata_df = pd.DataFrame([metadata_si_bandit])
 
@@ -354,7 +354,7 @@ class SICloc:
         :param is_local: flag to retreive the dataset locally or from S3 (credentials are required)
         :param si_cloc_repo_path: path to retrieve the si_cloc dataset locally and `is_local` is set to True
         """
-        security_indicator_cloc_reports = _aggregate_thoth_results(
+        security_indicator_cloc_reports = aggregate_thoth_results(
             limit_results=limit_results,
             max_ids=max_ids,
             is_local=is_local,

@@ -37,7 +37,7 @@ def extract_zip_file(file_path: Path):
         zip_file.extractall()
 
 
-def _aggregate_thoth_results(
+def aggregate_thoth_results(
     limit_results: bool = False,
     max_ids: int = 5,
     is_local: bool = True,

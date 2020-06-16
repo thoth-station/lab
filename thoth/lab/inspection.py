@@ -58,7 +58,7 @@ from IPython.display import display
 
 from thoth.storages import InspectionResultsStore
 from thoth.lab.utils import group_index
-from .common import _aggregate_thoth_results
+from .common import aggregate_thoth_results
 
 _LOGGER = logging.getLogger("thoth.lab.inspection")
 
@@ -145,7 +145,7 @@ def aggregate_inspection_results(
     :param is_local: flag to retreive the dataset locally or from S3 (credentials are required)
     :param inspection_repo_path: required to retrieve the performance dataset locally and `is_local` is set to True
     """
-    inspection_reports = _aggregate_thoth_results(
+    inspection_reports = aggregate_thoth_results(
         limit_results=limit_results,
         max_ids=max_ids,
         is_local=is_local,
