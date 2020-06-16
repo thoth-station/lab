@@ -76,8 +76,9 @@ def _aggregate_thoth_results(
 
             files.append(report)
 
-            if counter == max_ids:
-                return files
+            if limit_results:
+                if counter == max_ids:
+                    return files
 
             counter += 1
 
@@ -106,15 +107,14 @@ def _aggregate_thoth_results(
                                 json_file = json.load(json_file_type)
                                 json_file["requirements"] = specification["python"]["requirements"]
                                 json_file["requirements_locked"] = specification["python"]["requirements_locked"]
-                                # json_file["runtime_environment"] = specification["python"]["runtime_environment"]
-                                # pop build logs to save some memory (not necessary for now)
                                 json_file["build_log"] = None
 
                             json_file["identifier"] = main_repo.stem
                             files[str(main_repo)].append(json_file)
 
-                            if counter == max_ids:
-                                return files
+                            if limit_results:
+                                if counter == max_ids:
+                                    return files
 
                             counter += 1
 
@@ -125,8 +125,9 @@ def _aggregate_thoth_results(
 
                 files.append(json_file)
 
-                if counter == max_ids:
-                    return files
+                if limit_results:
+                    if counter == max_ids:
+                        return files
 
                 counter += 1
 

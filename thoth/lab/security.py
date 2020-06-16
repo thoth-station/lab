@@ -53,7 +53,7 @@ class SIBandit:
         :param limit_results: reduce the number of security_indicator_bandit reports ids considered to `max_ids` to test analysis
         :param max_ids: maximum number of security_indicator_bandit reports ids considered
         :param is_local: flag to retreive the dataset locally or from S3 (credentials are required)
-        :param security_indicator_bandit_repo_path: required if you want to retrieve the security_indicator_bandit dataset locally and `is_local` is set to True
+        :param security_indicator_bandit_repo_path: path to retrieve the security_indicator_bandit dataset locally and `is_local` is set to True
         """
         security_indicator_bandit_reports = _aggregate_thoth_results(
             limit_results=limit_results,
@@ -156,7 +156,7 @@ class SIBandit:
         return extracted_info, summary_files
 
     def create_security_confidence_dataframe(self, si_bandit_report: dict) -> Tuple[pd.DataFrame, Dict[str, int]]:
-        """ Create Security/Confidence dataframe for si-bandit report."""
+        """Create Security/Confidence dataframe for si-bandit report."""
         results_sec_conf, summary_files = self.extract_severity_confidence_info(
             si_bandit_report=si_bandit_report, filters_files=["tests/"]
         )
@@ -178,7 +178,7 @@ class SIBandit:
     def produce_si_bandit_report_summary_dataframe(
         metadata_df: pd.DataFrame, si_bandit_sec_conf_df: pd.DataFrame, summary_files: Dict[str, int]
     ) -> pd.DataFrame:
-        """ Create si-bandit report summary dataframe."""
+        """Create si-bandit report summary dataframe."""
         subset_df = pd.DataFrame([si_bandit_sec_conf_df["_total"].to_dict()])
         report_summary_df = pd.concat([metadata_df, subset_df], axis=1)
         report_summary_df["number_of_files_with_severities"] = int(summary_files["number_of_files_with_severities"])
@@ -347,12 +347,12 @@ class SICloc:
         is_local: bool = True,
         security_indicator_cloc_repo_path: Path = Path("security/si-cloc"),
     ) -> list:
-        """Aggregate security_indicator_cloc results from jsons stored in Ceph or locally from `security_indicator_cloc` repo.
+        """Aggregate si_cloc results from jsons stored in Ceph or locally from `si_cloc` repo.
 
-        :param limit_results: reduce the number of security_indicator_cloc reports ids considered to `max_ids` to test analysis
-        :param max_ids: maximum number of security_indicator_cloc reports ids considered
+        :param limit_results: reduce the number of si_cloc reports ids considered to `max_ids` to test analysis
+        :param max_ids: maximum number of si_cloc reports ids considered
         :param is_local: flag to retreive the dataset locally or from S3 (credentials are required)
-        :param security_indicator_cloc_repo_path: required if you want to retrieve the security_indicator_cloc dataset locally and `is_local` is set to True
+        :param si_cloc_repo_path: path to retrieve the si_cloc dataset locally and `is_local` is set to True
         """
         security_indicator_cloc_reports = _aggregate_thoth_results(
             limit_results=limit_results,
@@ -380,14 +380,14 @@ class SICloc:
         return extracted_metadata
 
     def create_si_cloc_metadata_dataframe(self, si_cloc_report: dict) -> pd.DataFrame:
-        """ Create si-cloc report metadata dataframe."""
+        """Create si-cloc report metadata dataframe."""
         metadata_si_cloc = self.extract_data_from_si_cloc_metadata(report_metadata=si_cloc_report["metadata"])
         metadata_df = pd.DataFrame([metadata_si_cloc])
 
         return metadata_df
 
     def create_cloc_results_dataframe(self, si_cloc_report: dict) -> pd.DataFrame:
-        """ Create si-cloc report results dataframe."""
+        """Create si-cloc report results dataframe."""
         results = {k: v for k, v in si_cloc_report["result"].items() if k != "header"}
         results["SUM"]["n_lines"] = si_cloc_report["result"]["header"]["n_lines"]
         results_df = pd.json_normalize(results)
@@ -398,7 +398,7 @@ class SICloc:
     def produce_si_cloc_report_summary_dataframe(
         metadata_df: pd.DataFrame, cloc_results_df: pd.DataFrame
     ) -> pd.DataFrame:
-        """ Create si-cloc report summary dataframe."""
+        """Create si-cloc report summary dataframe."""
         report_summary_df = pd.concat([metadata_df, cloc_results_df], axis=1)
 
         return report_summary_df
