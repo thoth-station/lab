@@ -348,8 +348,6 @@ def create_adviser_heatmap(
             if not file_name:
                 file_name = ""
             fig = ax.get_figure()
-            if not file_name:
-                file_name = ""
 
             fig.savefig(
                 f"{project_dir_path}/Adviser_justifications_{file_name}_{datetime.utcnow()}.png",
