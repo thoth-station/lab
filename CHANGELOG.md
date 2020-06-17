@@ -662,3 +662,9 @@
 * State only direct dependencies in requirements.txt
 * Create initial dependencies.yml config
 * Initial project import
+
+## Release 0.2.0 (2020-06-17T06:59:42)
+* Do not make method private
+* Adjust methods
+* Introduce classes to analysis thoth SI
+* update the maintainer for release of thoth-lab
