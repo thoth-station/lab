@@ -21,12 +21,18 @@ import logging
 import json
 import os
 from thoth.storages.result_base import ResultStorageBase
+from thoth.storages.si_bandit import SIBanditResultsStore
+from thoth.storages.si_cloc import SIClocResultsStore
 from typing import Optional, Union
 from pathlib import Path
 from zipfile import ZipFile
 
 _LOGGER = logging.getLogger("thoth.lab.common")
 
+_STORE = {
+    "si-bandit": SIBanditResultsStore(),
+    "si-cloc": SIClocResultsStore()
+}
 
 def extract_zip_file(file_path: Path):
     """Extract files from zip files."""
@@ -42,7 +48,7 @@ def aggregate_thoth_results(
     max_ids: int = 5,
     is_local: bool = True,
     repo_path: Optional[Path] = None,
-    store: Optional[ResultStorageBase] = None,
+    store_name: Optional[str] = None,
     is_inspection: Optional[str] = None,
 ) -> Union[list, dict]:
     """Aggregate results from jsons stored in Ceph for Thoth or locally from repo.
@@ -65,7 +71,7 @@ def aggregate_thoth_results(
     counter = 1
 
     if not is_local:
-        store = store()
+        store = _STORE[store_name]
         store.connect()
 
         for document_id in store.get_document_listing():
