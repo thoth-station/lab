@@ -23,7 +23,6 @@ import pandas as pd
 
 from pathlib import Path
 
-from thoth.storages import SolverResultsStore
 from .common import aggregate_thoth_results
 
 _LOGGER = logging.getLogger("thoth.lab.solver")
@@ -46,7 +45,7 @@ def aggregate_solver_results(
         max_ids=max_ids,
         is_local=is_local,
         repo_path=solver_repo_path,
-        store=SolverResultsStore,
+        store_name="solver",
     )
 
     return solver_reports

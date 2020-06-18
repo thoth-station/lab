@@ -19,27 +19,29 @@
 import logging
 import json
 
-import pandas as pd
+import numpy as np
 
 from pathlib import Path
+from typing import List, Optional, Tuple, Dict
+
+import pandas as pd
 
 from plotly import graph_objs as go
 from plotly.offline import iplot
 
-# from thoth.storages import SIBanditResultsStore, SIClocResultsStore
-from .common import aggregate_thoth_results
-from typing import List, Optional, Tuple, Dict
+from thoth.python import Source
 
-from thoth.storages import SIBanditResultsStore
-from thoth.storages import SIClocResultsStore
+from .common import aggregate_thoth_results
 
 _LOGGER = logging.getLogger("thoth.lab.security")
 
 logging.basicConfig(level=logging.INFO)
 
 
-class SIBandit:
-    """Class of methods used to analyze SI bandit analyzer results."""
+class SecurityIndicators:
+    """Class of methods used to analyze Security Indicators (SI)."""
+
+    # SI-bandit
 
     @staticmethod
     def aggregate_security_indicator_bandit_results(
@@ -60,14 +62,14 @@ class SIBandit:
             max_ids=max_ids,
             is_local=is_local,
             repo_path=security_indicator_bandit_repo_path,
-            store=SIBanditResultsStore,
+            store_name="si-bandit",
         )
 
         return security_indicator_bandit_reports
 
     @staticmethod
     def extract_data_from_si_bandit_metadata(report_metadata: dict) -> dict:
-        """Extract data from report metadata."""
+        """Extract data from si-bandit report metadata."""
         extracted_metadata = {
             "datetime": report_metadata["datetime"],
             "analyzer": report_metadata["analyzer"],
@@ -155,10 +157,12 @@ class SIBandit:
 
         return extracted_info, summary_files
 
-    def create_security_confidence_dataframe(self, si_bandit_report: dict) -> Tuple[pd.DataFrame, Dict[str, int]]:
+    def create_security_confidence_dataframe(
+        self, si_bandit_report: dict, filters_files: Optional[List[str]] = None
+    ) -> Tuple[pd.DataFrame, Dict[str, int]]:
         """Create Security/Confidence dataframe for si-bandit report."""
         results_sec_conf, summary_files = self.extract_severity_confidence_info(
-            si_bandit_report=si_bandit_report, filters_files=["tests/"]
+            si_bandit_report=si_bandit_report, filters_files=filters_files
         )
 
         summary_df = pd.DataFrame()
@@ -181,19 +185,44 @@ class SIBandit:
         """Create si-bandit report summary dataframe."""
         subset_df = pd.DataFrame([si_bandit_sec_conf_df["_total"].to_dict()])
         report_summary_df = pd.concat([metadata_df, subset_df], axis=1)
-        report_summary_df["number_of_files_with_severities"] = int(summary_files["number_of_files_with_severities"])
-        report_summary_df["number_of_analyzed_files"] = int(summary_files["number_of_analyzed_files"])
-        report_summary_df["number_of_filtered_files"] = int(summary_files["number_of_filtered_files"])
-        report_summary_df["number_of_files_total"] = int(summary_files["number_of_filtered_files"]) + int(
-            summary_files["number_of_analyzed_files"]
+        report_summary_df["number_of_files_with_severities"] = pd.to_numeric(
+            summary_files["number_of_files_with_severities"]
         )
+        report_summary_df["number_of_analyzed_files"] = pd.to_numeric(summary_files["number_of_analyzed_files"])
+        report_summary_df["number_of_filtered_files"] = pd.to_numeric(summary_files["number_of_filtered_files"])
+        report_summary_df["number_of_files_total"] = pd.to_numeric(
+            summary_files["number_of_filtered_files"]
+        ) + pd.to_numeric(summary_files["number_of_analyzed_files"])
         report_summary_df["_total_severity"] = pd.to_numeric(report_summary_df["_total_severity"])
 
         return report_summary_df
 
-    def create_si_bandit_final_dataframe(self, si_bandit_reports: List[dict]) -> pd.DataFrame:
+    @staticmethod
+    def add_release_date(metadata_df: pd.DataFrame) -> pd.DataFrame:
+        """Add release date to metadata."""
+        package_name = metadata_df["package_name"][0]
+        package_version = metadata_df["package_version"][0]
+        package_index = metadata_df["package_index"][0]
+
+        _LOGGER.debug("consider index %r", package_index)
+        source = Source(package_index)
+
+        _LOGGER.debug("Obtaining %r versions", package_name)
+
+        release_date = source.get_package_release_date(package_name=package_name, package_version=package_version)
+        metadata_df["release_date"] = pd.Timestamp(release_date, unit="s")
+
+        return metadata_df
+
+    def create_si_bandit_final_dataframe(
+        self,
+        si_bandit_reports: List[dict],
+        use_external_source_data: bool = False,
+        filters_files: Optional[List[str]] = None,
+    ) -> pd.DataFrame:
         """Create final si-bandit dataframe."""
         counter = 1
+        final_df = pd.DataFrame()
         total_reports = len(si_bandit_reports)
 
         for si_bandit_report in si_bandit_reports:
@@ -205,21 +234,23 @@ class SIBandit:
             _LOGGER.info(f"Analyzing package_version: {metadata_df['package_version'][0]}")
             _LOGGER.info(f"Analyzing package_index: {metadata_df['package_index'][0]}")
 
+            if use_external_source_data:
+                try:
+                    metadata_df = self.add_release_date(metadata_df=metadata_df)
+                except Exception as e:
+                    _LOGGER.warning(e)
+                    pass
+
             # Create Security/Confidence dataframe
             security_confidence_df, summary_files = self.create_security_confidence_dataframe(
-                si_bandit_report=si_bandit_report
+                si_bandit_report=si_bandit_report, filters_files=filters_files
             )
 
             si_bandit_report_summary_df = self.produce_si_bandit_report_summary_dataframe(
                 metadata_df=metadata_df, si_bandit_sec_conf_df=security_confidence_df, summary_files=summary_files
             )
 
-            if counter == 1:
-                # Initialize columns in final dataframe
-                final_df = pd.DataFrame(columns=si_bandit_report_summary_df.columns)
-
-            # Add row, aka si-bandit report to final dataframe
-            final_df.loc[counter] = si_bandit_report_summary_df.iloc[0]
+            final_df = pd.concat([final_df, si_bandit_report_summary_df], axis=0)
 
             counter += 1
 
@@ -308,7 +339,7 @@ class SIBandit:
             trace = go.Scatter(
                 x=packages,
                 y=vulnerabilites[vulnerability_class],
-                mode="markers+lines",
+                mode="markers",
                 marker=dict(size=4, opacity=0.8),
                 name=f"{vulnerability_class}",
             )
@@ -320,7 +351,7 @@ class SIBandit:
             trace = go.Scatter(
                 x=packages,
                 y=infos[security_info],
-                mode="markers+lines",
+                mode="markers",
                 marker=dict(size=4, opacity=0.8),
                 name=f"{security_info}",
             )
@@ -336,9 +367,7 @@ class SIBandit:
 
         iplot(fig, filename="scatter-colorscale")
 
-
-class SICloc:
-    """Class of methods used to analyze SI cloc analyzer results."""
+    # SI-cloc
 
     @staticmethod
     def aggregate_security_indicator_cloc_results(
@@ -359,14 +388,14 @@ class SICloc:
             max_ids=max_ids,
             is_local=is_local,
             repo_path=security_indicator_cloc_repo_path,
-            store=SIClocResultsStore,
+            store_name="si-cloc",
         )
 
         return security_indicator_cloc_reports
 
     @staticmethod
     def extract_data_from_si_cloc_metadata(report_metadata: dict) -> dict:
-        """Extract data from report metadata."""
+        """Extract data from si-cloc report metadata."""
         extracted_metadata = {
             "datetime": report_metadata["datetime"],
             "analyzer": report_metadata["analyzer"],
@@ -386,7 +415,7 @@ class SICloc:
 
         return metadata_df
 
-    def create_cloc_results_dataframe(self, si_cloc_report: dict) -> pd.DataFrame:
+    def create_si_cloc_results_dataframe(self, si_cloc_report: dict) -> pd.DataFrame:
         """Create si-cloc report results dataframe."""
         results = {k: v for k, v in si_cloc_report["result"].items() if k != "header"}
         results["SUM"]["n_lines"] = si_cloc_report["result"]["header"]["n_lines"]
@@ -421,7 +450,7 @@ class SICloc:
             _LOGGER.info(f"Analyzing package_index: {metadata_df['package_index'][0]}")
 
             # Create Security/Confidence dataframe
-            cloc_results_df = self.create_cloc_results_dataframe(si_cloc_report=si_cloc_report)
+            cloc_results_df = self.create_si_cloc_results_dataframe(si_cloc_report=si_cloc_report)
 
             si_cloc_report_summary_df = self.produce_si_cloc_report_summary_dataframe(
                 metadata_df=metadata_df, cloc_results_df=cloc_results_df
