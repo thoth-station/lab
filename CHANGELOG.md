@@ -668,3 +668,9 @@
 * Adjust methods
 * Introduce classes to analysis thoth SI
 * update the maintainer for release of thoth-lab
+
+## Release 0.2.1 (2020-06-18T19:17:41)
+* Adjust solver
+* Unify class, improve plots and add data
+* Generalize method
+* change deps
