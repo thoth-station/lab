@@ -23,6 +23,7 @@ import os
 from thoth.storages.result_base import ResultStorageBase
 from thoth.storages.si_bandit import SIBanditResultsStore
 from thoth.storages.si_cloc import SIClocResultsStore
+from thoth.storages import SolverResultsStore
 from typing import Optional, Union
 from pathlib import Path
 from zipfile import ZipFile
@@ -31,8 +32,10 @@ _LOGGER = logging.getLogger("thoth.lab.common")
 
 _STORE = {
     "si-bandit": SIBanditResultsStore(),
-    "si-cloc": SIClocResultsStore()
+    "si-cloc": SIClocResultsStore(),
+    "solver": SolverResultsStore()
 }
+
 
 def extract_zip_file(file_path: Path):
     """Extract files from zip files."""
