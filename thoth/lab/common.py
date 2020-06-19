@@ -67,7 +67,7 @@ def aggregate_thoth_results(
         files = []
 
     if not is_local:
-        files, counter = aggregate_thoth_results_from_ceph(files=files)
+        files, counter = aggregate_thoth_results_from_ceph(store_name=store_name, files=files)
 
     elif is_local:
         counter = 1
@@ -125,7 +125,7 @@ def aggregate_thoth_results(
     return files
 
 
-def aggregate_thoth_results_from_ceph(files: Union[dict, list]) -> Tuple[Union[dict, list], int]:
+def aggregate_thoth_results_from_ceph(store_name: str, files: Union[dict, list]) -> Tuple[Union[dict, list], int]:
     """Aggregate Thoth results from Ceph."""
     _STORE = {
         "inspection": InspectionResultsStore(),
