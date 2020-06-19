@@ -25,18 +25,11 @@ from thoth.storages.si_bandit import SIBanditResultsStore
 from thoth.storages.si_cloc import SIClocResultsStore
 from thoth.storages.inspections import InspectionResultsStore
 from thoth.storages import SolverResultsStore
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 from pathlib import Path
 from zipfile import ZipFile
 
 _LOGGER = logging.getLogger("thoth.lab.common")
-
-_STORE = {
-    "inspection": InspectionResultsStore(),
-    "si-bandit": SIBanditResultsStore(),
-    "si-cloc": SIClocResultsStore(),
-    "solver": SolverResultsStore()
-}
 
 
 def extract_zip_file(file_path: Path):
@@ -73,27 +66,12 @@ def aggregate_thoth_results(
     else:
         files = []
 
-    counter = 1
-
     if not is_local:
-        store = _STORE[store_name]
-        store.connect()
-
-        for document_id in store.get_document_listing():
-            _LOGGER.debug("Document n. %r", counter)
-            _LOGGER.debug(document_id)
-
-            report = store.retrieve_document(document_id=document_id)
-
-            files.append(report)
-
-            if limit_results:
-                if counter == max_ids:
-                    return files
-
-            counter += 1
+        files, counter = aggregate_thoth_results_from_ceph(store_name=store_name, files=files)
 
     elif is_local:
+        counter = 1
+
         _LOGGER.debug(f"Retrieving dataset at path... {repo_path}")
         if not repo_path.exists():
             raise Exception("There is no dataset at this path")
@@ -142,6 +120,36 @@ def aggregate_thoth_results(
 
                 counter += 1
 
-    _LOGGER.debug("Number of file retrieved is: %r" % counter)
+    _LOGGER.info("Number of file retrieved is: %r" % counter)
 
     return files
+
+
+def aggregate_thoth_results_from_ceph(store_name: str, files: Union[dict, list]) -> Tuple[Union[dict, list], int]:
+    """Aggregate Thoth results from Ceph."""
+    _STORE = {
+        "inspection": InspectionResultsStore(),
+        "si-bandit": SIBanditResultsStore(),
+        "si-cloc": SIClocResultsStore(),
+        "solver": SolverResultsStore(),
+    }
+    store = _STORE[store_name]
+    store.connect()
+
+    counter = 1
+
+    for document_id in store.get_document_listing():
+        _LOGGER.debug("Document n. %r", counter)
+        _LOGGER.debug(document_id)
+
+        report = store.retrieve_document(document_id=document_id)
+
+        files.append(report)
+
+        if limit_results:
+            if counter == max_ids:
+                return files
+
+        counter += 1
+
+    return files, counter
