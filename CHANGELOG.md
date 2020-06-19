@@ -678,3 +678,9 @@
 ## Release 0.2.2 (2020-06-19T08:08:44)
 * Add import of InspectionStore
 * Add-store
+
+## Release 0.2.3 (2020-06-19T12:55:41)
+* Add parameter
+* Use info for message
+* Introduce methods
+* Move variabls to be instantiated only if not local flag
