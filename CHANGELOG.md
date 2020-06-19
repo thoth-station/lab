@@ -674,3 +674,7 @@
 * Unify class, improve plots and add data
 * Generalize method
 * change deps
+
+## Release 0.2.2 (2020-06-19T08:08:44)
+* Add import of InspectionStore
+* Add-store
