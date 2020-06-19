@@ -120,7 +120,7 @@ def aggregate_thoth_results(
 
                 counter += 1
 
-    _LOGGER.debug("Number of file retrieved is: %r" % counter)
+    _LOGGER.info("Number of file retrieved is: %r" % counter)
 
     return files
 
