@@ -31,14 +31,6 @@ from zipfile import ZipFile
 
 _LOGGER = logging.getLogger("thoth.lab.common")
 
-_STORE = {
-    "inspection": InspectionResultsStore(),
-    "si-bandit": SIBanditResultsStore(),
-    "si-cloc": SIClocResultsStore(),
-    "solver": SolverResultsStore()
-}
-
-
 def extract_zip_file(file_path: Path):
     """Extract files from zip files."""
     with ZipFile(file_path, "r") as zip_file:
@@ -76,6 +68,12 @@ def aggregate_thoth_results(
     counter = 1
 
     if not is_local:
+        _STORE = {
+            "inspection": InspectionResultsStore(),
+            "si-bandit": SIBanditResultsStore(),
+            "si-cloc": SIClocResultsStore(),
+            "solver": SolverResultsStore()
+        }
         store = _STORE[store_name]
         store.connect()
 
