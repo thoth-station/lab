@@ -150,7 +150,7 @@ def aggregate_inspection_results(
         max_ids=max_ids,
         is_local=is_local,
         repo_path=inspection_repo_path,
-        store=InspectionResultsStore,
+        store_name="inspection",
         is_inspection=True,
     )
 

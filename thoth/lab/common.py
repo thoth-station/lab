@@ -31,6 +31,7 @@ from zipfile import ZipFile
 _LOGGER = logging.getLogger("thoth.lab.common")
 
 _STORE = {
+    "inspection": InspectionResultsStore()
     "si-bandit": SIBanditResultsStore(),
     "si-cloc": SIClocResultsStore(),
     "solver": SolverResultsStore()
