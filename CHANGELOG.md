@@ -684,3 +684,7 @@
 * Use info for message
 * Introduce methods
 * Move variabls to be instantiated only if not local flag
+
+## Release 0.2.4 (2020-06-23T20:44:53)
+* make coala happy
+* Add methods for aggreagaation and correct instantiation
