@@ -67,10 +67,12 @@ def aggregate_thoth_results(
         files = []
 
     if not is_local:
-        files, counter = aggregate_thoth_results_from_ceph(store_name=store_name, files=files)
+        files, counter = aggregate_thoth_results_from_ceph(
+            store_name=store_name, files=files, limit_results=limit_results, max_ids=max_ids
+        )
 
     elif is_local:
-        counter = 1
+        counter = 0
 
         _LOGGER.debug(f"Retrieving dataset at path... {repo_path}")
         if not repo_path.exists():
@@ -125,22 +127,25 @@ def aggregate_thoth_results(
     return files
 
 
-def aggregate_thoth_results_from_ceph(store_name: str, files: Union[dict, list]) -> Tuple[Union[dict, list], int]:
+def aggregate_thoth_results_from_ceph(
+    store_name: str, files: Union[dict, list], limit_results: bool = False, max_ids: int = 5
+) -> Tuple[Union[dict, list], int]:
     """Aggregate Thoth results from Ceph."""
     _STORE = {
-        "inspection": InspectionResultsStore(),
-        "si-bandit": SIBanditResultsStore(),
-        "si-cloc": SIClocResultsStore(),
-        "solver": SolverResultsStore(),
+        "inspection": InspectionResultsStore,
+        "si-bandit": SIBanditResultsStore,
+        "si-cloc": SIClocResultsStore,
+        "solver": SolverResultsStore,
     }
-    store = _STORE[store_name]
+    store_type = _STORE[store_name]
+    store = store_type()
     store.connect()
 
-    counter = 1
+    counter = 0
 
     for document_id in store.get_document_listing():
-        _LOGGER.debug("Document n. %r", counter)
-        _LOGGER.debug(document_id)
+        _LOGGER.info("Document n. %r", counter + 1)
+        _LOGGER.info(document_id)
 
         report = store.retrieve_document(document_id=document_id)
 
