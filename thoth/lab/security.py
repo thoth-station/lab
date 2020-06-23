@@ -257,33 +257,52 @@ class SecurityIndicators:
         return final_df
 
     @staticmethod
-    def create_package_releases_vulnerabilities_trend(package_summary_df: pd.DataFrame):
-        """Plot vulnerabilites trend for a package.
+    def create_package_releases_vulnerabilities_trend(
+        si_bandit_df: pd.DataFrame,
+        package_name: str,
+        package_index: str,
+        security_infos: Optional[List[str]] = None,
+        show_vulnerability_data: bool = False,
+    ):
+        """Plot vulnerabilites trend for a Python package from a certain index.
 
-        :param package_summary_df dataframe for plot of vulnerabilites for a package from a certain index
+        :param si_bandit_df: pandas dataframe given by 'create_si_bandit_final_dataframe' method
+        with `use_external_source_data` set to True.
+        :param package_name: Python Package name filter
+        :param package_index: Python Package index filter
+        :param security_infos: list of info to be visualized in the plot
+        :param show_vulnerability_data: show all data regarding vulnerabilites if set to True
         """
-        package_name = package_summary_df["package_name"].values[0]
-        package_index = package_summary_df["package_index"].values[0]
+        package_summary_df = si_bandit_df[
+            (si_bandit_df["package_name"] == package_name) & (si_bandit_df["package_index"] == package_index)
+        ]
+
+        package_summary_df = package_summary_df.sort_values(by=["release_date"], ascending=True)
 
         X = package_summary_df["package_version"]
+
         data = []
 
-        vulnerabilites_classes = [col for col in package_summary_df if col.startswith("SEVERITY.")]
+        if show_vulnerability_data:
 
-        for vulnerability_class in vulnerabilites_classes:
+            vulnerabilites_classes = [col for col in package_summary_df if col.startswith("SEVERITY.")]
 
-            subset_df = package_summary_df[[vulnerability_class]]
-            if subset_df.values.any():
-                Z = [z[0] for z in subset_df.values]
+            for vulnerability_class in vulnerabilites_classes:
 
-                trace = go.Scatter(
-                    x=X, y=Z, mode="markers+lines", marker=dict(size=4, opacity=0.8), name=f"{vulnerability_class}"
-                )
+                subset_df = package_summary_df[[vulnerability_class]]
+                if subset_df.values.any():
+                    Z = [z[0] for z in subset_df.values]
 
-                data.append(trace)
+                    trace = go.Scatter(
+                        x=X, y=Z, mode="markers+lines", marker=dict(size=4, opacity=0.8), name=f"{vulnerability_class}"
+                    )
 
-        for security_info in ["_total_severity"]:
+                    data.append(trace)
 
+        if not security_infos:
+            security_infos = ["_total_severity"]
+
+        for security_info in security_infos:
             subset_df = package_summary_df[[security_info]]
             Z = [z[0] for z in subset_df.values]
 
@@ -296,7 +315,7 @@ class SecurityIndicators:
         layout = go.Layout(
             title=f"SI analysis for {package_name} from {package_index} using SI-bandit",
             xaxis=dict(title="Releases"),
-            yaxis=dict(title="Total number of vulnerabilities"),
+            yaxis=dict(title="Security scores and sub_scores"),
             showlegend=True,
             legend=dict(orientation="h", y=-0.7, yanchor="top"),
         )
@@ -305,32 +324,34 @@ class SecurityIndicators:
         iplot(fig, filename="scatter-colorscale")
 
     @staticmethod
-    def create_vulnerabilities_plot(security_df: pd.DataFrame):
-        """Plot vulnerabilities for packages.
+    def create_vulnerabilities_plot(
+        security_df: pd.DataFrame, security_infos: Optional[List[str]] = None, show_vulnerability_data: bool = False
+    ) -> None:
+        """Plot vulnerabilites trend for a Python package from a certain index.
 
-        :param security_df dataframe for plot of vulnerabilities for packages
+        :param security_df: pandas dataframe given by 'create_si_bandit_final_dataframe' method
+        with `use_external_source_data` set to True.
+        :param security_infos: list of info to be visualized in the plot
+        :param show_vulnerability_data: show all data regarding vulnerabilites if set to True
         """
+        if not security_infos:
+            security_infos = ["_total_severity"]
+
         packages = []
         vulnerabilites = {}
         total_severities = []
 
-        severity_columns = [col for col in security_df if col.startswith("SEVERITY.")]
-
-        for column in severity_columns:
+        for column in security_infos:
             vulnerabilites[column] = []
 
-        for index, row in security_df[
-            ["package_name", "package_version", "package_index", "_total_severity"] + severity_columns
-        ].iterrows():
-
+        for index, row in security_df[["package_name", "package_version", "package_index"] + security_infos].iterrows():
             package_name = row["package_name"]
             package_version = row["package_version"]
             package_index = row["package_index"]
 
             packages.append(f"{package_name}-{package_version}-{package_index}")
-            total_severities.append(row["_total_severity"])
 
-            for column in severity_columns:
+            for column in security_infos:
                 vulnerabilites[column].append(row[column])
 
         data = []
@@ -346,18 +367,6 @@ class SecurityIndicators:
 
             data.append(trace)
 
-        infos = {"_total_severity": total_severities}
-        for security_info in infos:
-            trace = go.Scatter(
-                x=packages,
-                y=infos[security_info],
-                mode="markers",
-                marker=dict(size=4, opacity=0.8),
-                name=f"{security_info}",
-            )
-
-            data.append(trace)
-
         layout = go.Layout(
             title="SI analysis for Python packages using SI-bandit",
             xaxis=dict(title="{package_name-package_version-package_index}"),
@@ -366,6 +375,59 @@ class SecurityIndicators:
         fig = go.Figure(data=data, layout=layout)
 
         iplot(fig, filename="scatter-colorscale")
+
+    @staticmethod
+    def define_si_scores(si_bandit_df: pd.DataFrame) -> pd.DataFrame():
+        """Define security scores from si bandit outputs.
+
+        WARNING: It depends on all data considered.
+        """
+        HIGH_CONFIDENCE_WEIGHT = 1
+        MEDIUM_CONFIDENCE_WEIGHT = 0.5
+        LOW_CONFIDENCE_WEIGHT = 0.1
+
+        q_min_max_scaler = {}
+
+        for security in ["LOW", "MEDIUM", "HIGH"]:
+            for confidence in ["LOW", "MEDIUM", "HIGH"]:
+
+                q = f"SEVERITY.{security}__CONFIDENCE.{confidence}"
+
+                min_max_scaler = (si_bandit_df[q] - si_bandit_df[q].min()) / (si_bandit_df[q].max() - si_bandit_df[q].min())
+
+                si_bandit_df[f"{q}_scaled"] = min_max_scaler
+
+        si_bandit_df["SEVERITY.HIGH.sub_score"] = (
+            si_bandit_df["SEVERITY.HIGH__CONFIDENCE.HIGH"].fillna(0) * HIGH_CONFIDENCE_WEIGHT
+            + si_bandit_df["SEVERITY.HIGH__CONFIDENCE.MEDIUM"].fillna(0) * MEDIUM_CONFIDENCE_WEIGHT
+            + si_bandit_df["SEVERITY.HIGH__CONFIDENCE.LOW"].fillna(0) * LOW_CONFIDENCE_WEIGHT
+        ) / 3
+
+        si_bandit_df["SEVERITY.MEDIUM.sub_score"] = (
+            si_bandit_df["SEVERITY.MEDIUM__CONFIDENCE.HIGH_scaled"].fillna(0) * HIGH_CONFIDENCE_WEIGHT
+            + si_bandit_df["SEVERITY.MEDIUM__CONFIDENCE.MEDIUM_scaled"].fillna(0) * MEDIUM_CONFIDENCE_WEIGHT
+            + si_bandit_df["SEVERITY.MEDIUM__CONFIDENCE.LOW_scaled"].fillna(0) * LOW_CONFIDENCE_WEIGHT
+        ) / 3
+
+        si_bandit_df["SEVERITY.LOW.sub_score"] = (
+            si_bandit_df["SEVERITY.LOW__CONFIDENCE.HIGH_scaled"].fillna(0) * HIGH_CONFIDENCE_WEIGHT
+            + si_bandit_df["SEVERITY.LOW__CONFIDENCE.MEDIUM_scaled"].fillna(0) * MEDIUM_CONFIDENCE_WEIGHT
+            + si_bandit_df["SEVERITY.LOW__CONFIDENCE.LOW_scaled"].fillna(0) * LOW_CONFIDENCE_WEIGHT
+        ) / 3
+
+        HIGH_SEVERITY_WEIGHT = 100
+        MEDIUM_SEVERITY_WEIGHT = 10
+        LOW_SEVERITY_WEIGHT = 1
+
+        si_bandit_df["SEVERITY.score"] = (
+            si_bandit_df["SEVERITY.HIGH.sub_score"] * HIGH_SEVERITY_WEIGHT
+            + si_bandit_df["SEVERITY.MEDIUM.sub_score"] * MEDIUM_SEVERITY_WEIGHT
+            + si_bandit_df["SEVERITY.LOW.sub_score"] * LOW_SEVERITY_WEIGHT
+        ) / 3
+
+        si_bandit_df["SEVERITY.score.normalized"] = si_bandit_df["SEVERITY.score"] / si_bandit_df["number_of_analyzed_files"].max()
+
+        return si_bandit_df
 
     # SI-cloc
 
