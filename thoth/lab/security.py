@@ -393,7 +393,9 @@ class SecurityIndicators:
 
                 q = f"SEVERITY.{security}__CONFIDENCE.{confidence}"
 
-                min_max_scaler = (si_bandit_df[q] - si_bandit_df[q].min()) / (si_bandit_df[q].max() - si_bandit_df[q].min())
+                min_max_scaler = (si_bandit_df[q] - si_bandit_df[q].min()) / (
+                    si_bandit_df[q].max() - si_bandit_df[q].min()
+                )
 
                 si_bandit_df[f"{q}_scaled"] = min_max_scaler
 
@@ -425,7 +427,9 @@ class SecurityIndicators:
             + si_bandit_df["SEVERITY.LOW.sub_score"] * LOW_SEVERITY_WEIGHT
         ) / 3
 
-        si_bandit_df["SEVERITY.score.normalized"] = si_bandit_df["SEVERITY.score"] / si_bandit_df["number_of_analyzed_files"].max()
+        si_bandit_df["SEVERITY.score.normalized"] = (
+            si_bandit_df["SEVERITY.score"] / si_bandit_df["number_of_analyzed_files"].max()
+        )
 
         return si_bandit_df
 
