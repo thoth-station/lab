@@ -688,3 +688,6 @@
 ## Release 0.2.4 (2020-06-23T20:44:53)
 * make coala happy
 * Add methods for aggreagaation and correct instantiation
+
+## Release 0.2.5 (2020-06-24T09:06:15)
+* Add package
