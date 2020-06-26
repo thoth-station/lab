@@ -1,3 +1,5 @@
+include requirements.txt
+
 graft thoth/lab/viz/assets
 
 # Patterns to exclude from any directory
