@@ -691,3 +691,6 @@
 
 ## Release 0.2.5 (2020-06-24T09:06:15)
 * Add package
+
+## Release 0.2.6 (2020-06-26T08:08:49)
+* Include requirements.txt in distribution
