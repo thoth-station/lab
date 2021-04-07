@@ -6,10 +6,10 @@ quality in Jupyter notebooks. This library is used in `project Thoth
 <https://thoth-station.ninja>`__.
 
 See `thoth-station/jupyter-notebook
-<https://github.com/thoth-station/jupyter-notebook>`__ and
-`thoth-station/notebooks <https://github.com/thoth-station/notebooks>`__ repos
-for more information about usage of this library in `project Thoth
-<https://thoth-station.ninja>`__.
+<https://github.com/thoth-station/jupyter-notebook>`__, `thoth-station/datasets
+<https://github.com/thoth-station/datasets/>`__ or `thoth-station/notebooks
+<https://github.com/thoth-station/notebooks>`__ repos for more information
+about usage of this library in `project Thoth <https://thoth-station.ninja>`__.
 
 Installation
 ============
