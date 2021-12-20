@@ -17,15 +17,7 @@
 """Inspection report generation and visualization."""
 
 import logging
-import re
-
 import pandas as pd
-
-from typing import Any, Dict, List, Tuple, Union
-from thoth.lab import inspection
-from thoth.lab import underscore
-from thoth.lab.exception import NotUniqueValues
-
 from IPython.core.display import HTML
 
 

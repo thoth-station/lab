@@ -18,5 +18,5 @@
 """Exceptions for thoth-lab methods."""
 
 
-class NotUniqueValues(Exception):
+class NotUniqueValues(Exception):  # noqa N818
     """An exception when dateframe unique method cannot return results."""

@@ -6,3 +6,10 @@ from .utils import packages_info
 
 __title__ = "thoth-lab"
 __version__ = "0.2.6"
+
+
+__all__ = [
+    obtain_location,
+    GraphQueryResult,
+    packages_info,
+]

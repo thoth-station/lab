@@ -13,14 +13,13 @@ networkx = "*"
 pandas = "*"
 pandas-profiling = "*"
 prettyprinter = "*"
-# visualizations
 plotly = "*"
 cufflinks = "*"
 matplotlib = "*"
-# nbextensions
 jupyter-require = "*"
-jupyter_contrib_nbextensions = "*"  # needed by pipenv shell
+jupyter_contrib_nbextensions = "*"
 scikit-learn = "*"
+toml = "*"
 
 [dev-packages]
 autopep8 = "*"

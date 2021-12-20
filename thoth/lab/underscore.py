@@ -23,8 +23,6 @@ import typing
 import numpy as np
 import pandas as pd
 
-from pandas import api
-
 from thoth.lab.utils import DEFAULT
 from thoth.lab.utils import resolve_query
 from thoth.lab.utils import rget
@@ -33,7 +31,7 @@ logger = logging.getLogger("thoth.lab.underscore")
 
 
 @pd.api.extensions.register_dataframe_accessor("_")
-class _Underscore(object):
+class _Underscore(object):  # noqa F811
     def __init__(self, df: pd.DataFrame):
         self._df: pd.DataFrame = df
 
@@ -45,7 +43,7 @@ class _Underscore(object):
             col, attrs = attrs
             values = self._df[col]._.get(attrs, default=default, **kwargs)
         else:
-            col, = attrs
+            (col,) = attrs
             values = self._df[col]
 
         return values
@@ -280,7 +278,7 @@ class _Underscore(object):
 
 
 @pd.api.extensions.register_series_accessor("_")
-class _Underscore(object):
+class _Underscore(object):  # noqa F811
     def __init__(self, series: pd.Series):
         self._s: pd.Series = series
 

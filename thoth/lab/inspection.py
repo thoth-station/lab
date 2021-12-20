@@ -16,7 +16,6 @@
 
 """Inspection results processing and analysis."""
 
-import functools
 import logging
 import re
 import os
@@ -27,23 +26,18 @@ import math
 import numpy as np
 import pandas as pd
 
-import textwrap
-import typing
-
 import cufflinks as cf
 import plotly
 import plotly.offline as py
 
-import matplotlib
 import matplotlib.pyplot as plt
 
 import seaborn as sns
 
-from pandas_profiling import ProfileReport as profile
+from pandas_profiling import ProfileReport as profile  # noqa N813
 from prettyprinter import pformat
 
 from typing import Any, Dict, List, Tuple, Union, Optional
-from typing import Callable, Iterable
 
 from numpy import array
 from sklearn.preprocessing import LabelEncoder
@@ -53,7 +47,7 @@ from pathlib import Path
 from plotly import graph_objs as go
 from plotly import figure_factory as ff
 from plotly import tools
-from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
+from plotly.offline import iplot
 from IPython.display import display
 
 from thoth.storages import InspectionResultsStore
@@ -481,7 +475,7 @@ def create_duration_histogram(data: pd.DataFrame, columns: Union[str, List[str]]
 
 
 def query_inspection_dataframe(inspection_df: pd.DataFrame, *args, **kwargs) -> pd.DataFrame:
-    """Wrapper around _.query method which always include `duration` columns in filter expression."""
+    """Use Wrapper around _.query method which always include `duration` columns in filter expression."""
     like = kwargs.pop("like", None)
     regex = kwargs.pop("regex", None)
 
@@ -542,7 +536,7 @@ def make_subplots(data: pd.DataFrame, columns: List[str] = None, *, kind: str = 
             if columns is None:
                 raise ValueError("`scatter_with_bounds` requires `col` argument, not provided.")
             try:
-                columns, = columns
+                (columns,) = columns
             except ValueError:
                 raise ValueError("`scatter_with_bounds` does not allow for multiple columns.")
 
@@ -608,7 +602,7 @@ def make_subplots(data: pd.DataFrame, columns: List[str] = None, *, kind: str = 
 
         text: str = str(index_label)
 
-        annot["text"] = re.sub(r"^(.{%d}).*(.{%d})$" % (aw, aw), "\g<1>...\g<2>", text)  # Ignore PycodestyleBear (W605)
+        annot["text"] = re.sub(r"^(.{%d}).*(.{%d})$" % (aw, aw), "\g<1>...\g<2>", text)  # noqa W605
         annot["hovertext"] = "<br>".join(pformat(index_label).split("\n"))
 
     # add axis titles as plot annotations
@@ -700,10 +694,10 @@ def create_inspection_dataframes(inspection_results_dict: dict, duration_info: b
         identifier_counter += 1
 
     if not inspection_df_dict:
-        _LOGGER.info(f"No inspections identified.")
+        _LOGGER.info("No inspections identified.")
         return inspection_df_dict, inspections_df
 
-    _INSPECTION_PERFORMANCE_VALUES = ["stdout__@result__elapsed", "stdout__@result__rate"]
+    _INSPECTION_PERFORMANCE_VALUES = ["stdout__@result__elapsed", "stdout__@result__rate"]  # noqa N806
     index = 0
     for dataframe in inspection_df_dict.values():
         new_df = evaluate_statistics_on_inspection_df(df=dataframe, column_names=_INSPECTION_PERFORMANCE_VALUES)
@@ -874,13 +868,11 @@ def create_inspection_3d_plot(plot_df: pd.DataFrame, quantity: str, identifiers_
         logging.info(f"Only {_PERFORMANCE_QUANTITY} are accepted as quantity")
         return
 
-    label_encoder = LabelEncoder()
-
-    X = [x[0] for x in plot_df[["re_string"]].values]
+    X = [x[0] for x in plot_df[["re_string"]].values]  # noqa N806
 
     integer_y_encoded = [y[0] for y in plot_df[["sws_hash_id_encoded"]].values]
 
-    Z = [z[0] for z in plot_df[[quantity]].values]
+    Z = [z[0] for z in plot_df[[quantity]].values]  # noqa N806
 
     trace1 = go.Scatter3d(
         x=X,
@@ -961,7 +953,7 @@ def create_inspection_2d_plot(
         if component == "pytorch":
             name_component = "torch"
         subset_df = plot_df[plot_df["pi_component"] == component]
-        Z = [z[0] for z in subset_df[[quantity]].values]
+        Z = [z[0] for z in subset_df[[quantity]].values]  # noqa N806
 
         trace = go.Scatter(
             x=integer_y_encoded,
@@ -1112,7 +1104,7 @@ def evaluate_inspection_statistics(parameters: list, inspection_df_dict: dict, c
     :param parameters: inspection parameters used in the analysis
     :param inspection_df_dict: dictionary with data frame as returned by `process_inspection_results' per identifier
     """
-    _STATISTICAL_PARAMETERS = [
+    _STATISTICAL_PARAMETERS = [  # noqa N806
         "cv_mean",
         "cv_median",
         "cv_q1",
@@ -1130,7 +1122,7 @@ def evaluate_inspection_statistics(parameters: list, inspection_df_dict: dict, c
     inspection_statistics_dict = {}
 
     for parameter in parameters:
-        IDENTIFIER_INSPECTIONS_REDUCED = []
+        IDENTIFIER_INSPECTIONS_REDUCED = []  # noqa N806
 
         evaluated_statistics = {}
 
@@ -1177,7 +1169,7 @@ def plot_interpolated_statistics_of_inspection_parameters(
     """Plot interpolated statistical quantity/ies of inspection parameter/s from different inspection batches."""
     if len(inspection_parameters) == 1 and len(statistical_quantities) > 1:
         if len(colour_list) != len(statistical_quantities):
-            _LOGGER.warning(f"List of statistical quantities and List of colours shall have the same length!")
+            _LOGGER.warning("List of statistical quantities and List of colours shall have the same length!")
 
         parameter_results = statistical_results_dict[inspection_parameters[0]]
 
@@ -1190,7 +1182,7 @@ def plot_interpolated_statistics_of_inspection_parameters(
 
     elif len(inspection_parameters) > 1 and len(statistical_quantities) == 1:
         if len(inspection_parameters) != len(colour_list):
-            _LOGGER.warning(f"List of inspection parameters and List of colours shall have the same length!")
+            _LOGGER.warning("List of inspection parameters and List of colours shall have the same length!")
 
         for i, parameter in enumerate(inspection_parameters):
             parameter_results = statistical_results_dict[parameter]
@@ -1206,7 +1198,7 @@ def plot_interpolated_statistics_of_inspection_parameters(
 
     elif len(inspection_parameters) == 1 and len(statistical_quantities) == 1:
         if len(colour_list) != len(statistical_quantities):
-            _LOGGER.warning(f"List of statistical quantities and List of colours shall have the same length!")
+            _LOGGER.warning("List of statistical quantities and List of colours shall have the same length!")
 
         parameter_results = statistical_results_dict[inspection_parameters[0]]
 
@@ -1548,7 +1540,7 @@ def columns_to_analyze(
                     lst_columns_to_analyze.append(i)
             except TypeError:
                 lst_new = list(df[i].values)
-                value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1:]])
+                value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1 :]])
                 if (value_count >= low) and (value_count <= high):
                     print(i, value_count)
                     lst_columns_to_analyze.append(i)
@@ -1632,17 +1624,17 @@ def duration_plots(df: pd.DataFrame):
 
     # Plot lag plot of job duration sorted by the start of job
     df = df.sort_values(by=["status__job__started_at"])
-    lag_plot(df["status__job__duration"], ax=ax4)
+    pd.plotting.lag_plot(df["status__job__duration"], ax=ax4)
     ax4.set_title("Job Duration Autocorrelation (Sort by job_started)")
 
     # Plot lag plot of lead time sorted by job created
     df = df.sort_values(by=["created"])
-    lag_plot(df["lead_time"], ax=ax5)
+    pd.plotting.lag_plot(df["lead_time"], ax=ax5)
     ax5.set_title("lead_duration Autocorrelation (Sort by created)")
 
     # Plot lag plot of lead time sorted by job started
     df = df.sort_values(by=["status__job__started_at"])
-    lag_plot(df["lead_time"], ax=ax6)
+    pd.plotting.lag_plot(df["lead_time"], ax=ax6)
     ax6.set_title("lead_duration Autocorrelation (Sort by job_started)")
 
 
@@ -1778,7 +1770,7 @@ def plot_distribution_of_jobs_combined_categories(
 
 # Function takes in a column and prints out the feature class
 def map_column_to_feature_class(column_name: str):
-    """Helper function that maps a column in the original dataframe to a feature class.
+    """Use Helper function that maps a column in the original dataframe to a feature class.
 
     :param column_name: column_name in inspection_df dataframe
     obtained by process_inspection_results with no columns dropped (drop=False)
@@ -1847,7 +1839,7 @@ def process_empty_or_mutable_parameters(inspection_df: pd.DataFrame):
             except TypeError:
                 # If values are type dict checks uniqueness
                 lst_new = list(inspection_df[i].values)
-                value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1:]])
+                value_count = len([i for n, i in enumerate(lst_new) if i not in lst_new[n + 1 :]])
                 list_of_unhashable_none_values.append(i)
                 _LOGGER.info(i, value_count)
     return inspection_df.drop(list_of_unhashable_none_values, axis=1)
@@ -1885,8 +1877,8 @@ def show_unique_value_count_by_feature_class(processed_df: pd.DataFrame):
             _LOGGER.info("#### {} {}".format(j, len(group)))
 
             # Groupby to get unique value count for each dataframe column
-            for l in list_of_parameters_per_feature:
-                _LOGGER.info(l, len(processed_df.groupby(l).size()))
+            for list_params in list_of_parameters_per_feature:
+                _LOGGER.info(list_params, len(processed_df.groupby(list_params).size()))
 
         except (TypeError, ValueError) as e:
             _LOGGER.warning(e)

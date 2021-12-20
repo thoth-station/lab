@@ -17,9 +17,6 @@
 """Security results processing and analysis."""
 
 import logging
-import json
-
-import numpy as np
 
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict
@@ -279,7 +276,7 @@ class SecurityIndicators:
 
         package_summary_df = package_summary_df.sort_values(by=["release_date"], ascending=True)
 
-        X = package_summary_df["package_version"]
+        X = package_summary_df["package_version"]  # noqa N806
 
         data = []
 
@@ -291,7 +288,7 @@ class SecurityIndicators:
 
                 subset_df = package_summary_df[[vulnerability_class]]
                 if subset_df.values.any():
-                    Z = [z[0] for z in subset_df.values]
+                    Z = [z[0] for z in subset_df.values]  # noqa N806
 
                     trace = go.Scatter(
                         x=X, y=Z, mode="markers+lines", marker=dict(size=4, opacity=0.8), name=f"{vulnerability_class}"
@@ -304,7 +301,7 @@ class SecurityIndicators:
 
         for security_info in security_infos:
             subset_df = package_summary_df[[security_info]]
-            Z = [z[0] for z in subset_df.values]
+            Z = [z[0] for z in subset_df.values]  # noqa N806
 
             trace = go.Scatter(
                 x=X, y=Z, mode="markers+lines", marker=dict(size=4, opacity=0.8), name=f"{security_info}"
@@ -339,7 +336,6 @@ class SecurityIndicators:
 
         packages = []
         vulnerabilites = {}
-        total_severities = []
 
         for column in security_infos:
             vulnerabilites[column] = []
@@ -382,11 +378,9 @@ class SecurityIndicators:
 
         WARNING: It depends on all data considered.
         """
-        HIGH_CONFIDENCE_WEIGHT = 1
-        MEDIUM_CONFIDENCE_WEIGHT = 0.5
-        LOW_CONFIDENCE_WEIGHT = 0.1
-
-        q_min_max_scaler = {}
+        HIGH_CONFIDENCE_WEIGHT = 1  # noqa N806
+        MEDIUM_CONFIDENCE_WEIGHT = 0.5  # noqa N806
+        LOW_CONFIDENCE_WEIGHT = 0.1  # noqa N806
 
         for security in ["LOW", "MEDIUM", "HIGH"]:
             for confidence in ["LOW", "MEDIUM", "HIGH"]:
@@ -417,9 +411,9 @@ class SecurityIndicators:
             + si_bandit_df["SEVERITY.LOW__CONFIDENCE.LOW_scaled"].fillna(0) * LOW_CONFIDENCE_WEIGHT
         ) / 3
 
-        HIGH_SEVERITY_WEIGHT = 100
-        MEDIUM_SEVERITY_WEIGHT = 10
-        LOW_SEVERITY_WEIGHT = 1
+        HIGH_SEVERITY_WEIGHT = 100  # noqa N806
+        MEDIUM_SEVERITY_WEIGHT = 10  # noqa N806
+        LOW_SEVERITY_WEIGHT = 1  # noqa N806
 
         si_bandit_df["SEVERITY.score"] = (
             si_bandit_df["SEVERITY.HIGH.sub_score"] * HIGH_SEVERITY_WEIGHT

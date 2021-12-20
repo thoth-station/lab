@@ -1,6 +1,22 @@
 Thoth lab
 ---------
 
+.. image:: https://img.shields.io/github/v/tag/thoth-station/lab?style=plastic
+  :target: https://github.com/thoth-station/lab/tags
+  :alt: GitHub tag (latest by date)
+
+.. image:: https://img.shields.io/pypi/v/thoth-lab?style=plastic
+  :target: https://pypi.org/project/thoth-lab
+  :alt: PyPI - Module Version
+
+.. image:: https://img.shields.io/pypi/l/thoth-lab?style=plastic
+  :target: https://pypi.org/project/thoth-lab
+  :alt: PyPI - License
+
+.. image:: https://img.shields.io/pypi/dm/thoth-lab?style=plastic
+  :target: https://pypi.org/project/thoth-lab
+  :alt: PyPI - Downloads
+
 A laboratory providing helper functions for experiments on software stack
 quality in Jupyter notebooks. This library is used in `project Thoth
 <https://thoth-station.ninja>`__.

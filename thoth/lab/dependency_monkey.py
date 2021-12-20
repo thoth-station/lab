@@ -20,7 +20,7 @@
 import logging
 import sys
 
-from typing import Union, List, Dict, Any, Tuple
+from typing import Union, List, Dict, Any
 from thoth.storages import DependencyMonkeyReportsStore
 
 _LOGGER = logging.getLogger("thoth.lab.depedendency_monkey")
@@ -73,7 +73,7 @@ def aggregate_dm_results_per_identifier(
             dm_info_dict[ids] = {}
             dm_info_dict[ids] = i_batch_ids_specifications
         else:
-            _LOGGER.info(f"No inspections batches identified")
+            _LOGGER.info("No inspections batches identified")
 
         if limit_results:
             if i_batch_counter > max_batch_identifiers_ids:
