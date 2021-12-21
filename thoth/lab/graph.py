@@ -58,7 +58,7 @@ class GraphQueryResult(object):
     """Wrap results of graph database queries."""
 
     def __init__(self, result):
-        """Initialization.
+        """Initialize.
 
         :param result: the result to be used as a query result, can be directly coroutine that is fired.
         """

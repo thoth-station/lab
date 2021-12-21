@@ -1,27 +1,16 @@
 thoth-storages
 thoth-python
-
 ipython
 ipykernel
 requests
-
 networkx
-
 pandas
 pandas-profiling
-
 prettyprinter
-
-# visualizations
 plotly
 cufflinks
 matplotlib
-
-# nbextensions
 jupyter-require
-jupyter_contrib_nbextensions  # needed by pipenv shell
-
+jupyter_contrib_nbextensions
 scikit-learn
-
-# dev-packages
-autopep8
+toml

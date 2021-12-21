@@ -21,9 +21,6 @@ import typing
 import networkx as nx
 import pandas as pd
 
-from pandas import api
-
-from . import underscore
 from .graph import DependencyGraph
 
 
@@ -50,7 +47,7 @@ class _Root(object):
         if len(root_candidates) > 1:
             raise ValueError("Multiple roots found: ", root_candidates)
 
-        root, = root_candidates
+        (root,) = root_candidates
 
         return root
 

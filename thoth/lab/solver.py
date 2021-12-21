@@ -17,9 +17,6 @@
 """Solver results processing and analysis."""
 
 import logging
-import json
-
-import pandas as pd
 
 from pathlib import Path
 
@@ -54,7 +51,9 @@ def aggregate_solver_results(
 def construct_solver_from_metadata(solver_report_metadata: dict) -> str:
     """Construct solver from solver report metadata."""
     os_name = solver_report_metadata["os_release"]["name"].lower()
-    os_version = "".join([l for l in solver_report_metadata["os_release"]["version"] if l.isdigit()])
+    os_version = "".join(
+        [list_solver for list_solver in solver_report_metadata["os_release"]["version"] if list_solver.isdigit()]
+    )
     python_interpreter = f'{solver_report_metadata["python"]["major"]}{solver_report_metadata["python"]["minor"]}'
     solver = f"{os_name}-{os_version}-py{python_interpreter}"
 

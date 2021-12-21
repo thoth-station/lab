@@ -233,6 +233,7 @@ def _rget(f, obj: typing.Any, attr: str, default: typing.Any = DEFAULT) -> typin
 
 def has(obj, attr):
     """Combine both `hasattr` and `in` into universal `has`."""
+
     def _in(_obj, _attr):
         try:
             return _attr in _obj

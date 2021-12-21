@@ -20,10 +20,9 @@
 import logging
 import json
 import os
-from thoth.storages.result_base import ResultStorageBase
-from thoth.storages.si_bandit import SIBanditResultsStore
-from thoth.storages.si_cloc import SIClocResultsStore
-from thoth.storages.inspections import InspectionResultsStore
+from thoth.storages import SIBanditStore
+from thoth.storages import SIClocStore
+from thoth.storages import InspectionResultsStore
 from thoth.storages import SolverResultsStore
 from typing import Optional, Union, Tuple
 from pathlib import Path
@@ -131,13 +130,13 @@ def aggregate_thoth_results_from_ceph(
     store_name: str, files: Union[dict, list], limit_results: bool = False, max_ids: int = 5
 ) -> Tuple[Union[dict, list], int]:
     """Aggregate Thoth results from Ceph."""
-    _STORE = {
+    _store = {
         "inspection": InspectionResultsStore,
-        "si-bandit": SIBanditResultsStore,
-        "si-cloc": SIClocResultsStore,
+        "si-bandit": SIBanditStore,
+        "si-cloc": SIClocStore,
         "solver": SolverResultsStore,
     }
-    store_type = _STORE[store_name]
+    store_type = _store[store_name]
     store = store_type()
     store.connect()
 

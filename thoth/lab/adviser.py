@@ -18,24 +18,22 @@
 
 import logging
 import os
-import json
 import sys
 import hashlib
 import copy
 
 import pandas as pd
-import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
 import plotly
 import plotly.graph_objs as go
-from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
+from plotly.offline import iplot
 
 from pathlib import Path
 from datetime import datetime
-from typing import Union, List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional
 
 from numpy import array
 from sklearn.preprocessing import LabelEncoder
@@ -84,7 +82,7 @@ def aggregate_adviser_results(adviser_version: str, limit_results: bool = False,
                         "justification": [{"message": error_msg, "type": "ERROR"}],
                         "error": error,
                         "message": error_msg,
-                        "type": "ERROR"
+                        "type": "ERROR",
                     }
                 else:
                     adviser_dict = extract_adviser_justifications(report=report, adviser_dict=adviser_dict, ids=ids)
@@ -210,8 +208,8 @@ def create_adviser_results_histogram(plot_df: pd.DataFrame):
     justifications_df = justifications_df.transpose()
     justifications_df = justifications_df.sort_values(by="count", ascending=False)
 
-    X = justifications_df["jm_hash_id_encoded"]
-    Y = justifications_df["count"]
+    X = justifications_df["jm_hash_id_encoded"]  # noqa N806
+    Y = justifications_df["count"]  # noqa N806
 
     trace1 = go.Bar(
         x=X,
@@ -248,7 +246,7 @@ def _aggregate_data_per_interval(adviser_justification_df: pd.DataFrame):
     begin = min(adviser_justification_df["date"].values)
     end = max(adviser_justification_df["date"].values)
     timestamps = []
-    delta = np.timedelta64(7, 'D')
+    delta = np.timedelta64(7, "D")
     intervals = (end - begin) / delta
     value = begin
     for i in range(1, int(intervals) + 1):
@@ -258,9 +256,9 @@ def _aggregate_data_per_interval(adviser_justification_df: pd.DataFrame):
     timestamps[len(timestamps) - 1] = end
 
     aggregated_data = {}
-    for l in range(0, len(timestamps)):
-        low = timestamps[l - 1]
-        high = timestamps[l]
+    for tm_ in range(0, len(timestamps)):
+        low = timestamps[tm_ - 1]
+        high = timestamps[tm_]
         aggregated_data[high] = {}
         subset_df = adviser_justification_df[
             (adviser_justification_df["date"] >= low) & (adviser_justification_df["date"] <= high)
@@ -350,8 +348,7 @@ def create_adviser_heatmap(
             fig = ax.get_figure()
 
             fig.savefig(
-                f"{project_dir_path}/Adviser_justifications_{file_name}_{datetime.utcnow()}.png",
-                bbox_inches="tight"
+                f"{project_dir_path}/Adviser_justifications_{file_name}_{datetime.utcnow()}.png", bbox_inches="tight"
             )
 
     plt.close()
