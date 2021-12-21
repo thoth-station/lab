@@ -9,7 +9,7 @@ __version__ = "0.2.6"
 
 
 __all__ = [
-    obtain_location,
+    obtain_location.__name__,
     GraphQueryResult,
     packages_info,
 ]
