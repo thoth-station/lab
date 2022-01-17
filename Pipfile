@@ -6,7 +6,7 @@ name = "pypi"
 [packages]
 thoth-storages = "*"
 thoth-python = "*"
-ipython = "*"
+ipython = "<8.0.0"
 ipykernel = "*"
 requests = "*"
 networkx = "*"
